@@ -1,0 +1,84 @@
+class InteractionRichPresentation (object) :
+
+
+    def __init__(self, mrna_bulge, mrna_inter, mir_inter, mir_bulge):
+        self.mrna_bulge = mrna_bulge
+        self.mrna_inter = mrna_inter
+        self.mir_inter = mir_inter
+        self.mir_bulge = mir_bulge
+        self.mir_bulges_count, self.mrna_bulges_count = self.count_bulges()
+
+    def interaction_iterator (self):
+        i=0
+        while i<len(self.mir_inter) :
+            if self.mir_inter[i]!=' ':
+                yield (i ,self.mrna_inter[i]+self.mir_inter[i])
+            i+=1
+
+    def mir_iterator (self):
+        #make sure the iterator won't access out of range of the mir variables
+        mir_len = max (len(self.mir_inter), len(self.mir_bulge))
+        mir_inter = self.mir_inter + " "*mir_len
+        mir_bulge = self.mir_bulge + " "*mir_len
+
+        i=0
+        while i<mir_len:
+            if mir_inter[i]!=' ' or mir_bulge[i]!=' ':
+                yield (i, self.mix_inter_bulge(mir_inter[i], mir_bulge[i]))
+            i+=1
+
+    def mir_pairing_iterator (self):
+        for i, mir in self.mir_iterator():
+            try:
+                mrna = self.mrna_inter[i]
+            except IndexError:
+                mrna = " "
+            yield mrna+mir
+
+
+    def extract_seed (self) :
+        #notice: if there a bulge in the mrna, it will skip it. the function return 8 consecutive mirna nt.
+        mrna_bulge=""
+        mrna_inter=""
+        mir_inter=""
+        mir_bulge=""
+        mir_i = self.mir_iterator()
+        for k in range(8):
+            i, mir = mir_i.next()
+            mrna_bulge += self.mrna_bulge[i]
+            mrna_inter += self.mrna_inter[i]
+            mir_inter += self.mir_inter[i]
+            mir_bulge += self.mir_bulge[i]
+        return InteractionRichPresentation(mrna_bulge, mrna_inter, mir_inter, mir_bulge)
+
+    def count_bulges (self) :
+        mir_bulges_count = len(self.mir_bulge.split())
+        mrna_bulges_count = len(self.mrna_bulge.split())
+        return  mir_bulges_count, mrna_bulges_count
+
+    def mix_inter_bulge(self, i, b):
+        if i==' ' and b==' ':
+            raise Exception ("both interaction and bulge have nt value. one of them should be empty (space).")
+        return chr(ord(i) + ord(b) - ord(' '))
+
+
+    def tostring(self):
+        classstr = ""
+        classstr = classstr + "target_bulge:       {}\n".format(self.mrna_bulge)
+        classstr = classstr + "target_interaction: {}\n".format(self.mrna_inter)
+        classstr = classstr + "mirna_interaction:  {}\n".format(self.mir_inter)
+        classstr = classstr + "mirna_bulge:        {}\n".format(self.mir_bulge)
+        #classstr = classstr + "mrna_bulges_count: {} \nmir_bulges_count:  {}\n".format(self.mrna_bulges_count,self.mir_bulges_count)
+
+        return classstr
+
+    def replace_T_U (self) :
+        self.mrna_bulge = self.mrna_bulge.upper().replace('T', 'U')
+        self.mrna_inter = self.mrna_inter.upper().replace('T', 'U')
+        self.mir_inter = self.mir_inter.upper().replace('T', 'U')
+        self.mir_bulge = self.mir_bulge.upper().replace('T', 'U')
+
+    def __str__(self):
+        return self.tostring()
+
+

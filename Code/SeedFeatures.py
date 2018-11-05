@@ -89,107 +89,149 @@ class SeedFeatures(object):
                    'Seed_match_6mer3GU5': 0,
                    'Seed_match_6mer1GU6': 0,
                    'Seed_match_6mer2GU6': 0,
-                   'Seed_match_6mer3GU6': 0}
+                   'Seed_match_6mer3GU6': 0,
+                   'Seed_match_6mer_mismatch': 0}
+
         mirna = self.seed.mir_inter
         mrna = self.seed.mrna_inter
 
         # # Seed_match_8mer
-        if self.seed_complementary(mirna[-8:], mrna[-8:])['count_c'] == 8:
+        if self.seed_complementary(mirna[0:8], mrna[0:8])['count_c'] == 8:
             smt_dic['Seed_match_8mer'] = 1
 
         # # Seed_match_8merA1
-        if self.seed_complementary(mirna[-8:-1], mrna[-8:-1])['count_c'] == 7 and mirna[-1] == 'A' and mirna[-1] + mrna[
-            -1] not in c4:
+        if self.seed_complementary(mirna[1:8], mrna[1:8])['count_c'] == 7 and mirna[0] == 'A' and mirna[0] + mrna[
+            0] not in c4:
             smt_dic['Seed_match_8merA1'] = 1
-        if self.seed_complementary(mirna[-8:-1], mrna[-8:-1])['count_c'] == 7 and mrna[-1] == 'A' and mirna[-1] + mrna[
-            -1] not in c4:
+        if self.seed_complementary(mirna[1:8], mrna[1:8])['count_c'] == 7 and mrna[0] == 'A' and mirna[0] + mrna[
+            0] not in c4:
             smt_dic['Seed_match_8merA1'] = 1
 
         # # Seed_match_7mer1
-        if self.seed_complementary(mirna[-7:], mrna[-7:])['count_c'] == 7:
+        if self.seed_complementary(mirna[0:7], mrna[0:7])['count_c'] == 7:
             smt_dic['Seed_match_7mer1'] = 1
 
         # # Seed_match_7mer2
-        if self.seed_complementary(mirna[-8:-1], mrna[-8:-1])['count_c'] == 7:
+        if self.seed_complementary(mirna[1:8], mrna[1:8])['count_c'] == 7:
             smt_dic['Seed_match_7mer2'] = 1
 
         # # Seed_match_7merA1
-        if self.seed_complementary(mirna[-7:-1], mrna[-7:-1])['count_c'] == 6 and mirna[-1] == 'A' and mirna[-1] + mrna[
-            -1] not in c4:
+        if self.seed_complementary(mirna[1:7], mrna[1:7])['count_c'] == 6 and mirna[0] == 'A' and mirna[-1] + mrna[
+            0] not in c4:
             smt_dic['Seed_match_7merA1'] = 1
-        if self.seed_complementary(mirna[-7:-1], mrna[-7:-1])['count_c'] == 6 and mrna[-1] == 'A' and mirna[-1] + mrna[
-            -1] not in c4:
+        if self.seed_complementary(mirna[1:7], mrna[1:7])['count_c'] == 6 and mrna[0] == 'A' and mirna[0] + mrna[
+            0] not in c4:
             smt_dic['Seed_match_7merA1'] = 1
 
         # # Seed_match_6mer1, Seed_match_6mer2, Seed_match_6mer3
-        if self.seed_complementary(mirna[-6:], mrna[-6:])['count_c'] == 6:
+        if self.seed_complementary(mirna[0:6], mrna[0:6])['count_c'] == 6:
             smt_dic['Seed_match_6mer1'] = 1
-        if self.seed_complementary(mirna[-7:-1], mrna[-7:-1])['count_c'] == 6:
+        if self.seed_complementary(mirna[1:7], mrna[1:7])['count_c'] == 6:
             smt_dic['Seed_match_6mer2'] = 1
-        if self.seed_complementary(mirna[-8:-2], mrna[-8:-2])['count_c'] == 6:
+        if self.seed_complementary(mirna[2:8], mrna[2:8])['count_c'] == 6:
             smt_dic['Seed_match_6mer3'] = 1
 
-        # # Seed_match_6mer1GU1,2,3,4,5,6
-        if self.seed_complementary(mirna[-6:], mrna[-6:])['count_c'] == 5 and self.seed_complementary(mirna[-6:], mrna[-6:])[
-            'count_w'] == 1:
+        ############################################################################################################
+        # Code for automatically generating the next section
+        #
+        # for k in range(1, 4):
+        #     print ("#Seed_match_6mer{}GU1,2,3,4,5,6".format(k))
+        #     for i in range(5, -1, -1):
+        #         print (
+        #             "if self.seed_complementary(mirna[{f}:{e}], mrna[{f}:{e}])['count_c'] == {c} and self.seed_complementary(mirna[{f}:{e}], mrna[{f}:{e}])['count_w'] == {w}:".format(
+        #                 c=i, w=6 - i, f=k - 1, e=5 + k))
+        #         print ("\tsmt_dic['Seed_match_6mer{}GU{}'] = 1".format(k, 6 - i))
+        #     print
+        ############################################################################################################
+
+        # Seed_match_6mer1GU1,2,3,4,5,6
+        if self.seed_complementary(mirna[0:6], mrna[0:6])['count_c'] == 5 and \
+                self.seed_complementary(mirna[0:6], mrna[0:6])['count_w'] == 1:
             smt_dic['Seed_match_6mer1GU1'] = 1
-        if self.seed_complementary(mirna[-6:], mrna[-6:])['count_c'] == 4 and self.seed_complementary(mirna[-6:], mrna[-6:])[
-            'count_w'] == 2:
+        if self.seed_complementary(mirna[0:6], mrna[0:6])['count_c'] == 4 and \
+                self.seed_complementary(mirna[0:6], mrna[0:6])['count_w'] == 2:
             smt_dic['Seed_match_6mer1GU2'] = 1
-        if self.seed_complementary(mirna[-6:], mrna[-6:])['count_c'] == 3 and self.seed_complementary(mirna[-6:], mrna[-6:])[
-            'count_w'] == 3:
+        if self.seed_complementary(mirna[0:6], mrna[0:6])['count_c'] == 3 and \
+                self.seed_complementary(mirna[0:6], mrna[0:6])['count_w'] == 3:
             smt_dic['Seed_match_6mer1GU3'] = 1
-        if self.seed_complementary(mirna[-6:], mrna[-6:])['count_c'] == 2 and self.seed_complementary(mirna[-6:], mrna[-6:])[
-            'count_w'] == 4:
+        if self.seed_complementary(mirna[0:6], mrna[0:6])['count_c'] == 2 and \
+                self.seed_complementary(mirna[0:6], mrna[0:6])['count_w'] == 4:
             smt_dic['Seed_match_6mer1GU4'] = 1
-        if self.seed_complementary(mirna[-6:], mrna[-6:])['count_c'] == 1 and self.seed_complementary(mirna[-6:], mrna[-6:])[
-            'count_w'] == 5:
+        if self.seed_complementary(mirna[0:6], mrna[0:6])['count_c'] == 1 and \
+                self.seed_complementary(mirna[0:6], mrna[0:6])['count_w'] == 5:
             smt_dic['Seed_match_6mer1GU5'] = 1
-        if self.seed_complementary(mirna[-6:], mrna[-6:])['count_c'] == 0 and self.seed_complementary(mirna[-6:], mrna[-6:])[
-            'count_w'] == 6:
+        if self.seed_complementary(mirna[0:6], mrna[0:6])['count_c'] == 0 and \
+                self.seed_complementary(mirna[0:6], mrna[0:6])['count_w'] == 6:
             smt_dic['Seed_match_6mer1GU6'] = 1
 
-        # # Seed_match_6mer2GU1,2,3,4,5,6
-        if self.seed_complementary(mirna[-7:-1], mrna[-7:-1])['count_c'] == 5 and \
-                self.seed_complementary(mirna[-7:-1], mrna[-7:-1])['count_w'] == 1:
+        # Seed_match_6mer2GU1,2,3,4,5,6
+        if self.seed_complementary(mirna[1:7], mrna[1:7])['count_c'] == 5 and \
+                self.seed_complementary(mirna[1:7], mrna[1:7])['count_w'] == 1:
             smt_dic['Seed_match_6mer2GU1'] = 1
-        if self.seed_complementary(mirna[-7:-1], mrna[-7:-1])['count_c'] == 4 and \
-                self.seed_complementary(mirna[-7:-1], mrna[-7:-1])['count_w'] == 2:
+        if self.seed_complementary(mirna[1:7], mrna[1:7])['count_c'] == 4 and \
+                self.seed_complementary(mirna[1:7], mrna[1:7])['count_w'] == 2:
             smt_dic['Seed_match_6mer2GU2'] = 1
-        if self.seed_complementary(mirna[-7:-1], mrna[-7:-1])['count_c'] == 3 and \
-                self.seed_complementary(mirna[-7:-1], mrna[-7:-1])['count_w'] == 3:
+        if self.seed_complementary(mirna[1:7], mrna[1:7])['count_c'] == 3 and \
+                self.seed_complementary(mirna[1:7], mrna[1:7])['count_w'] == 3:
             smt_dic['Seed_match_6mer2GU3'] = 1
-        if self.seed_complementary(mirna[-7:-1], mrna[-7:-1])['count_c'] == 2 and \
-                self.seed_complementary(mirna[-7:-1], mrna[-7:-1])['count_w'] == 4:
+        if self.seed_complementary(mirna[1:7], mrna[1:7])['count_c'] == 2 and \
+                self.seed_complementary(mirna[1:7], mrna[1:7])['count_w'] == 4:
             smt_dic['Seed_match_6mer2GU4'] = 1
-        if self.seed_complementary(mirna[-7:-1], mrna[-7:-1])['count_c'] == 1 and \
-                self.seed_complementary(mirna[-7:-1], mrna[-7:-1])['count_w'] == 5:
+        if self.seed_complementary(mirna[1:7], mrna[1:7])['count_c'] == 1 and \
+                self.seed_complementary(mirna[1:7], mrna[1:7])['count_w'] == 5:
             smt_dic['Seed_match_6mer2GU5'] = 1
-        if self.seed_complementary(mirna[-7:-1], mrna[-7:-1])['count_c'] == 0 and \
-                self.seed_complementary(mirna[-7:-1], mrna[-7:-1])['count_w'] == 6:
+        if self.seed_complementary(mirna[1:7], mrna[1:7])['count_c'] == 0 and \
+                self.seed_complementary(mirna[1:7], mrna[1:7])['count_w'] == 6:
             smt_dic['Seed_match_6mer2GU6'] = 1
 
-        # # Seed_match_6mer3GU1,2,3,4,5,6
-        if self.seed_complementary(mirna[-8:-2], mrna[-8:-2])['count_c'] == 5 and \
-                self.seed_complementary(mirna[-8:-2], mrna[-8:-2])['count_w'] == 1:
+        # Seed_match_6mer3GU1,2,3,4,5,6
+        if self.seed_complementary(mirna[2:8], mrna[2:8])['count_c'] == 5 and \
+                self.seed_complementary(mirna[2:8], mrna[2:8])['count_w'] == 1:
             smt_dic['Seed_match_6mer3GU1'] = 1
-        if self.seed_complementary(mirna[-8:-2], mrna[-8:-2])['count_c'] == 4 and \
-                self.seed_complementary(mirna[-8:-2], mrna[-8:-2])['count_w'] == 2:
+        if self.seed_complementary(mirna[2:8], mrna[2:8])['count_c'] == 4 and \
+                self.seed_complementary(mirna[2:8], mrna[2:8])['count_w'] == 2:
             smt_dic['Seed_match_6mer3GU2'] = 1
-        if self.seed_complementary(mirna[-8:-2], mrna[-8:-2])['count_c'] == 3 and \
-                self.seed_complementary(mirna[-8:-2], mrna[-8:-2])['count_w'] == 3:
+        if self.seed_complementary(mirna[2:8], mrna[2:8])['count_c'] == 3 and \
+                self.seed_complementary(mirna[2:8], mrna[2:8])['count_w'] == 3:
             smt_dic['Seed_match_6mer3GU3'] = 1
-        if self.seed_complementary(mirna[-8:-2], mrna[-8:-2])['count_c'] == 2 and \
-                self.seed_complementary(mirna[-8:-2], mrna[-8:-2])['count_w'] == 4:
+        if self.seed_complementary(mirna[2:8], mrna[2:8])['count_c'] == 2 and \
+                self.seed_complementary(mirna[2:8], mrna[2:8])['count_w'] == 4:
             smt_dic['Seed_match_6mer3GU4'] = 1
-        if self.seed_complementary(mirna[-8:-2], mrna[-8:-2])['count_c'] == 1 and \
-                self.seed_complementary(mirna[-8:-2], mrna[-8:-2])['count_w'] == 5:
+        if self.seed_complementary(mirna[2:8], mrna[2:8])['count_c'] == 1 and \
+                self.seed_complementary(mirna[2:8], mrna[2:8])['count_w'] == 5:
             smt_dic['Seed_match_6mer3GU5'] = 1
-        if self.seed_complementary(mirna[-8:-2], mrna[-8:-2])['count_c'] == 0 and \
-                self.seed_complementary(mirna[-8:-2], mrna[-8:-2])['count_w'] == 6:
+        if self.seed_complementary(mirna[2:8], mrna[2:8])['count_c'] == 0 and \
+                self.seed_complementary(mirna[2:8], mrna[2:8])['count_w'] == 6:
             smt_dic['Seed_match_6mer3GU6'] = 1
 
+        ############################################################################################################
+        # Code for automatically generating the next section
+        #
+        # for k in range(1, 3):
+        #     print ("#Seed_match_6mer{}mismatch".format(k))
+        #     print (
+        #         "if self.seed_complementary(mirna[{f}:{e}], mrna[{f}:{e}])['count_c'] == 6 and self.seed_complementary(mirna[{f}:{e}], mrna[{f}:{e}])['count_mismatch'] == 1:".format(
+        #             f=k - 1, e=6 + k))
+        #     print ("\tsmt_dic['Seed_match_6mer{}mismatch'] = 1".format(k))
+        #     print
+        ############################################################################################################
 
+
+        # Seed_match_6mer_mismatch
+        if self.seed_complementary(mirna[1:8], mrna[1:8])['count_c'] == 6 and \
+                self.seed_complementary(mirna[1:8], mrna[1:8])['count_mismatch'] == 1  \
+                and mirna[0] == 'A' and mirna[0] + mrna[0] not in c4:
+            smt_dic['Seed_match_6mer_mismatch'] = 1
+
+        if self.seed_complementary(mirna[1:8], mrna[1:8])['count_c'] == 6 and \
+                self.seed_complementary(mirna[1:8], mrna[1:8])['count_mismatch'] == 1  \
+                and mrna[0] == 'A' and mirna[0] + mrna[0] not in c4:
+            smt_dic['Seed_match_6mer_mismatch'] = 1
+
+
+        ###############################################################
+        # Update the dict
+        ###############################################################
         self.smt_dic = smt_dic
         self.seed_type = [seed_type for seed_type, onehot in smt_dic.items() if onehot == 1]
 

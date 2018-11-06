@@ -3,9 +3,9 @@ from collections import Counter
 #from SeedFeatures import *
 from InteractionRichPresentation import *
 
-class RichDuplex(object):
+class ViennaRNADuplex(object):
 
-    def __init__(self, o_mir, o_mrna_extended, full_mrna=0, mrna_start=0, mrna_end_extended=0):
+    def __init__(self, o_mir, o_mrna_extended):
         self.mir = o_mir
         self.mrna = o_mrna_extended
         self.duplex = RNA.duplexfold(self.mir, self.mrna)
@@ -21,6 +21,8 @@ class RichDuplex(object):
         self.mrna_idx = self.mrna_idx[::-1]
         self.mir_len = len(self.active_mir)
         self.mrna_len = len(self.active_mrna)
+
+        self.num_of_pairs = len(self.find_pairing(mir_pairing, '('))
 
         self.IRP = self.parse_interaction()
        #
@@ -99,6 +101,8 @@ class RichDuplex(object):
         classstr += " {} \n".format(self.duplex.structure)
         classstr += self.IRP.__str__()
         classstr += "\n"
+
+        classstr = classstr + "energy:  {} \n".format(-1*self.duplex_score)
 
      #   classstr = classstr + "site            ({}): {} \n".format(len(self.site), self.site)
         classstr = classstr + "active_mrna[-1] ({}): {} \n".format(len(self.active_mrna[::-1]), self.active_mrna[::-1])

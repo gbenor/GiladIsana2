@@ -1,24 +1,43 @@
-from collections import Counter
-from InteractionRichPresentation import *
 import pandas as pd
-
 class MrnaFeatures(object):
 
-    def __init__(self, irp):
-        self.irp = irp
-        self.irp.replace_T_U()
+    def __init__(self, mir, site, site_start_loc, site_end_loc, full_mrna, flank_number=70, hot_encoding_len=9):
+        self.mir = mir
+        self.site = site
+        self.site_start_loc = site_start_loc
+        self.site_end_loc = site_end_loc
+        self.full_mrna = full_mrna
+        self.flank_number = flank_number
+        self.hot_encoding_len = hot_encoding_len
+
 
     def extract_mrna_features(self):
-        self.miRNA_match_position()
-        self.miRNA_pairing_count()
+        mrna = self.full_mrna
+        mr_site = self.site
+        mr_site_loc = [self.site_start_loc, self.site_end_loc]
+
+        self.dte = self.distance_to_end(mrna, mr_site_loc)
+        self.tc = self.target_composition(mr_site)
+        self.fuc = self.flanking_up_composition(mrna, mr_site_loc, flank_number=self.flank_number)
+        self.fdc = self.flanking_down_composition(mrna, mr_site_loc, flank_number=self.flank_number)
+        self.PHE = self.pair_hot_encoding(self.mir, mr_site, self.hot_encoding_len)
+
+    def get_features(self):
+        f = [self.dte, self.tc, self.fuc, self.fdc, self.PHE]
+        df = map(lambda x: pd.DataFrame([x]), f)
+        r =  reduce (lambda x,y: pd.concat([x, y], axis=1, sort=False), df)
+        return r
+
+
+
 
     # # 3. location of target site (1)
-    def distance_to_end(mrna, mr_site_loc):  # 1
+    def distance_to_end(self, mrna, mr_site_loc):  # 1
         dte_dic = {'Dist_to_end': round(float(len(mrna) - int(mr_site_loc[1])) / len(mrna), 4)}
         return dte_dic
 
     # # 4. target composition (20+20+20)
-    def target_composition(mr_site):  # 20
+    def target_composition(self, mr_site):  # 20
         mrna = mr_site.upper().replace('T', 'U')
         count_A = 0
         count_U = 0
@@ -109,7 +128,7 @@ class MrnaFeatures(object):
                   'Target_CC_comp': round(float(count_CC) / all_dimer_count, 4)}
         return tc_dic
 
-    def flanking_up_composition(mrna, mr_site_loc, flank_number=70):  # 20
+    def flanking_up_composition(self, mrna, mr_site_loc, flank_number=70):  # 20
         mrna_full = mrna.upper().replace('T', 'U')
         mrna_up = mrna_full[max(0, mr_site_loc[0] - 70):mr_site_loc[0]]
         mrna_down = mrna_full[mr_site_loc[1] + 1:mr_site_loc[1] + 71]
@@ -209,7 +228,7 @@ class MrnaFeatures(object):
                    'Up_CC_comp': round(float(count_CC) / all_dimer_count, 4)}
         return fuc_dic
 
-    def flanking_down_composition(mrna, mr_site_loc, flank_number=70):  # 20
+    def flanking_down_composition(self, mrna, mr_site_loc, flank_number=70):  # 20
         mrna_full = mrna.upper().replace('T', 'U')
         mrna_up = mrna_full[max(0, mr_site_loc[0] - 70):mr_site_loc[0]]
         mrna_down = mrna_full[mr_site_loc[1] + 1:mr_site_loc[1] + 71]
@@ -309,18 +328,50 @@ class MrnaFeatures(object):
                    'Down_CC_comp': round(float(count_CC) / all_dimer_count, 4)}
         return fdc_dic
 
-    def tostring(self):
-        # mmp = pd.DataFrame([self.mmp_dic])
-        # mpc = pd.DataFrame([self.mpc_dic])
-        # pd.set_option('display.max_columns', None)
-        #
-        # classstr = ""
-        #
-        # classstr = classstr + str(mmp) + "\n"
-        # classstr = classstr + str(mpc) + "\n"
-        #
-        # return classstr
+    # # 8. pair hot-encoding
+    def pair_hot_encoding(self, mir, mr_site, length):
+        mirna = mir.upper().replace('T', 'U')[:length]
+        mrna = mr_site.upper().replace('T', 'U')[:length]
 
+        def hot_coding(seq):
+            if seq == 'A' or seq == 'a':
+                he = [1, 0, 0, 0, 0]
+            elif seq == 'U' or seq == 'u':
+                he = [0, 1, 0, 0, 0]
+            elif seq == 'T' or seq == 't':
+                he = [0, 1, 0, 0, 0]
+            elif seq == 'G' or seq == 'g':
+                he = [0, 0, 1, 0, 0]
+            elif seq == 'C' or seq == 'c':
+                he = [0, 0, 0, 1, 0]
+            else:
+                he = [0, 0, 0, 0, 1]
+            return he
 
-    def __str__(self):
-        return self.tostring()
+        PHE = {}
+        for i in range(len(mirna)):
+            for j in range(5):
+                key = 'MI_he_P%s_L%s' % (str(i + 1), str(j + 1))
+                PHE[key] = hot_coding(mirna[i])[j]
+
+        for i in range(len(mrna)):
+            for j in range(5):
+                key = 'MR_he_P%s_L%s' % (str(i + 1), str(j + 1))
+                PHE[key] = hot_coding(mrna[i])[j]
+        return PHE
+
+    # def tostring(self):
+    #     # mmp = pd.DataFrame([self.mmp_dic])
+    #     # mpc = pd.DataFrame([self.mpc_dic])
+    #     # pd.set_option('display.max_columns', None)
+    #     #
+    #     # classstr = ""
+    #     #
+    #     # classstr = classstr + str(mmp) + "\n"
+    #     # classstr = classstr + str(mpc) + "\n"
+    #     #
+    #     # return classstr
+    #
+    #
+    # def __str__(self):
+    #     return self.tostring()

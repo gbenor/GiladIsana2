@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from RichDuplex import *
+from ViennaRNADuplex import *
 from SeedFeatures import *
 #from Bio.Blast.Applications import NcbitblastnCommandline
 from Bio.Blast.Applications import NcbiblastnCommandline

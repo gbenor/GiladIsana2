@@ -18,16 +18,27 @@ CONFIG = {
 
 }
 
-human_clash_data_utr3 = pd.read_csv("Data/Human/Parsed/human_clash_data_utr3_with_biomart_seq_step2.csv")
-miranda_csv_file = "Data/Human/Parsed/human_clash_data_utr3_with_biomart_seq_miranda.csv"
-vienna_csv_file = "Data/Human/Parsed/human_clash_data_utr3_with_biomart_seq_vienna.csv"
+human_clash_data_utr3 = pd.read_csv("Data/Human/Parsed/human_clash_data_utr3.csv")
+miranda_csv_file = "Data/Human/Parsed/human_clash_data_utr3_miranda.csv"
+vienna_csv_file = "Data/Human/Parsed/human_clash_data_utr3_vienna.csv"
+
+
+############################################################################
+# Create duplex and filter out duplexes with small number of interactions
+############################################################################
 
 human_clash_data_utr3['vienna_num_of_pairs'] = np.nan
 human_clash_data_utr3['miranda_num_of_pairs'] = np.nan
 
 for index, row in human_clash_data_utr3.iterrows():
-    mirnanda_dp = MirandaDuplex(row.miRNA_seq, row.mRNA_seq_extended, "Data/Human/Parsed")
-    human_clash_data_utr3.loc[index,'miranda_num_of_pairs'] = mirnanda_dp.num_of_pairs
+    print row.ensg
+    # if row.ensg != "ENSG00000070444":
+    #     continue
+    try:
+        mirnanda_dp = MirandaDuplex(row.miRNA_seq, row.mRNA_seq_extended, "Data/Human/Parsed")
+        human_clash_data_utr3.loc[index,'miranda_num_of_pairs'] = mirnanda_dp.num_of_pairs
+    except NoMirandaHits:
+        human_clash_data_utr3.loc[index,'miranda_num_of_pairs'] = -1
 
     viennna_dp = ViennaRNADuplex (row.miRNA_seq, row.mRNA_seq_extended)
     human_clash_data_utr3.loc[index, 'vienna_num_of_pairs'] = viennna_dp.num_of_pairs
@@ -37,5 +48,3 @@ vienna_df = human_clash_data_utr3[human_clash_data_utr3.vienna_num_of_pairs>=CON
 
 miranda_df.to_csv(miranda_csv_file)
 vienna_df.to_csv(vienna_csv_file)
-
-

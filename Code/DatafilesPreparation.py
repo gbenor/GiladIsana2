@@ -72,12 +72,14 @@ def parse_blast (blast_result, mrna_seq_candidate):
                 for hsp in align.hsps:
                     if hsp.expect < E_VALUE_THRESH:
                         identities = hsp.identities
+                        sbjct_start = hsp.sbjct_start
+                        sbjct_end = hsp.sbjct_end
                         enst = ENST(align.hit_def,"|")
     try:
         full_mrna = mrna_seq_candidate[mrna_seq_candidate.enst == ENST(align.hit_def, "|")].sequence.item()
-        return enst, identities, full_mrna
+        return enst, identities, full_mrna, sbjct_start, sbjct_end
     except UnboundLocalError:
-        return np.nan, np.nan, np.nan
+        return np.nan, np.nan, np.nan, np.nan, np.nan
 
 
 
@@ -111,7 +113,9 @@ def CLASH_BIOMART_MERGE_FULL_MATCH (clash_file, biomart_file, output_file):
     biomart_df = pd.read_csv(biomart_file)
 
     clash_data['full_mrna_seq'] = np.nan
+    clash_data['full_mrna_seq_match_start'] = np.nan
     clash_data['full_mrna_source'] = np.nan
+
 
     for clash_index, clash_row in clash_data.iterrows():
         #find candidates with the same ensg
@@ -135,6 +139,7 @@ def CLASH_BIOMART_MERGE_FULL_MATCH (clash_file, biomart_file, output_file):
                 sequence_len = final_candidates.sequence.str.len()
                 row_with_the_longest_sequence = final_candidates[sequence_len==sequence_len.max()].iloc[0]
                 clash_data.loc[clash_index,'full_mrna_seq'] = row_with_the_longest_sequence.sequence
+                clash_data.loc[clash_index, 'full_mrna_seq_match_start'] = row_with_the_longest_sequence.sequence.find(clash_row.mRNA_seq_extended)
                 clash_data.loc[clash_index,'full_mrna_source'] = "BIOMART"
 
 
@@ -179,11 +184,13 @@ def CLASH_BIOMART_MERGE_BLASTN (clash_file, biomart_file, output_file):
             blast_output_filname = "blastout.xml"
             mrna = clash_row.mRNA_seq_extended
             run_blastn(mrna, db_title, blast_output_filname)
-            enst, identities, full_mrna = parse_blast(blast_output_filname, full_mrna_seq_candidate)
+            enst, identities, full_mrna,  sbjct_start, sbjct_end = parse_blast(blast_output_filname, full_mrna_seq_candidate)
             clash_data.loc[clash_index,'full_mrna_seq'] = full_mrna
             clash_data.loc[clash_index,'full_mrna_source'] = "BLASTN"
             clash_data.loc[clash_index,'full_mrna_identities'] = identities
             clash_data.loc[clash_index,'full_mrna_enst'] = enst
+            clash_data.loc[clash_index, 'full_mrna_seq_match_start'] = sbjct_start
+
             # os.remove("biomart.*")
             # os.remove(blast_output_filname)
             # os.remove("mrna_to_find.fasta")
@@ -195,19 +202,48 @@ def CLASH_BIOMART_MERGE_BLASTN (clash_file, biomart_file, output_file):
     print ("Finish merging. Merging {} rows.".format(row_count))
 
 
+def REMOVE_CDS (in_file, out_file):
+    df = pd.read_csv(in_file)
+    c = df.CDS ==1
+    f = df.full_mrna_source!="BIOMART"
+    row_to_remove = c & f
+    print ("removing {} CDS rows".format(sum(row_to_remove)))
+    df = df[~row_to_remove]
+    f = df.full_mrna_source!="BIOMART"
+    print ("no biomart rows: {} ".format(sum(f)))
+    df.to_csv(out_file)
+
+
+def BIOMART_ONLY (in_file, out_file):
+    df = pd.read_csv(in_file)
+    f = df.full_mrna_source=="BIOMART"
+    df = df[f]
+    print ("biomart rows: {} ".format(sum(f)))
+    df.to_csv(out_file)
+
 
 def main():
     os.sys.path.append(blast_dir)
     # CLASH_3UTR_filter ("Data/Human/Raw/1-s2.0-S009286741300439X-mmc1.txt",
     #                    "Data/Human/Parsed/human_clash_data_utr3.csv")
-    #
-    CLASH_BIOMART_MERGE_FULL_MATCH ("Data/Human/Parsed/human_clash_data_utr3.csv",
-                         "Data/Human/Raw/biomart_3utr.csv",
-                         "Data/Human/Parsed/human_clash_data_utr3_with_biomart_seq.csv")
 
-    CLASH_BIOMART_MERGE_BLASTN ("Data/Human/Parsed/human_clash_data_utr3_with_biomart_seq.csv",
-                         "Data/Human/Raw/biomart_3utr.csv",
-                         "Data/Human/Parsed/human_clash_data_utr3_with_biomart_seq_step2.csv")
+    # CLASH_BIOMART_MERGE_FULL_MATCH ("Data/Human/Parsed/human_clash_data_utr3_miranda_valid_seeds.csv",
+    #                      "Data/Human/Raw/biomart_3utr.csv",
+    #                      "Data/Human/Parsed/human_clash_data_utr3_miranda_valid_seeds_biomart.csv")
+
+    # REMOVE_CDS ("Data/Human/Parsed/human_clash_data_utr3_miranda_valid_seeds_biomart.csv",
+    #             "Data/Human/Parsed/human_clash_data_utr3_miranda_valid_seeds_biomart_no_CDS.csv")
+
+
+    BIOMART_ONLY("Data/Human/Parsed/human_clash_data_utr3_vienna_valid_seeds_biomart_no_CDS.csv",
+                 "Data/Human/Parsed/human_clash_data_utr3_vienna_valid_seeds_biomart_no_CDS_biomart_only.csv")
+
+    BIOMART_ONLY("Data/Human/Parsed/human_clash_data_utr3_miranda_valid_seeds_biomart_no_CDS.csv",
+                 "Data/Human/Parsed/human_clash_data_utr3_miranda_valid_seeds_biomart_no_CDS_biomart_only.csv")
+
+    # CLASH_BIOMART_MERGE_BLASTN ("Data/Human/Parsed/human_clash_data_utr3_miranda_valid_seeds_biomart.csv",
+    #                      "Data/Human/Raw/biomart_3utr.csv",
+    #                      "Data/Human/Parsed/human_clash_data_utr3_miranda_valid_seeds_biomart_blastn.csv")
 
 
 

@@ -13,16 +13,28 @@ class MatchingFeatures(object):
         self.miRNA_pairing_count()
 
 
+    def get_features(self):
+        f = [self.mmp_dic, self.mpc_dic]
+        df = map(lambda x: pd.DataFrame([x]), f)
+        r =  reduce (lambda x,y: pd.concat([x, y], axis=1, sort=False), df)
+        return r
+
+
+
     def miRNA_match_position(self):  # 20
         AU = ['AU', 'UA']
         GC = ['GC', 'CG']
         GU = ['GU', 'UG']
 
         mmp_dic = {}
-        i = 1
-        for pair in self.irp.mir_pairing_iterator():
+        pair_list = list(self.irp.mir_pairing_iterator())
+        for i in range (1,21):
             key = 'miRNA_match_position' + str(i)
-            i+=1
+            try:
+                pair = pair_list[i-1]
+            except IndexError:
+                pair = '  '
+
             if pair in AU:
                 mmp_dic[key] = 2
             elif pair in GC:

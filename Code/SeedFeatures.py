@@ -1,5 +1,6 @@
 from collections import Counter
 from InteractionRichPresentation import *
+import pandas as pd
 
 class SeedFeatures(object):
 
@@ -23,24 +24,35 @@ class SeedFeatures(object):
         return pairs2_7==6 or pairs3_8==6
 
     def is_simple_non_canonical (self):
-        #pairing at positions 2-7 or 3-8, allowing G-U pairs and up to one bulged or mismatched nucleotide
-        def evaluate_simple_non_canonical_condition (dict):
-            return (dict['count_mismatch'] <= 1) and ((dict['count_c'] + dict['count_w']) >= 5)
+        #at least six pairs within the seed
+        pairs = list(self.seed.mir_pairing_iterator())
+        return len(list(filter(lambda x: x.find(" ") == -1, pairs)))>=6
 
-        mirna = self.seed.mir_inter
-        mrna = self.seed.mrna_inter
-        pairs2_7_dict = self.seed_complementary(mirna[1:7], mrna[1:7])
-        pairs2_7_is_simple_non_canonical = evaluate_simple_non_canonical_condition (pairs2_7_dict)
-        pairs3_8_dict = self.seed_complementary(mirna[2:8], mrna[2:8])
-        pairs3_8_is_simple_non_canonical = evaluate_simple_non_canonical_condition(pairs3_8_dict)
-
-        return pairs2_7_is_simple_non_canonical or pairs3_8_is_simple_non_canonical
-
+        #
+        # #pairing at positions 2-7 or 3-8, allowing G-U pairs and up to one bulged or mismatched nucleotide
+        # def evaluate_simple_non_canonical_condition (dict):
+        #     return (dict['count_mismatch'] <= 1) and ((dict['count_c'] + dict['count_w']) >= 5)
+        #
+        # mirna = self.seed.mir_inter
+        # mrna = self.seed.mrna_inter
+        # pairs2_7_dict = self.seed_complementary(mirna[1:7], mrna[1:7])
+        # pairs2_7_is_simple_non_canonical = evaluate_simple_non_canonical_condition (pairs2_7_dict)
+        # pairs3_8_dict = self.seed_complementary(mirna[2:8], mrna[2:8])
+        # pairs3_8_is_simple_non_canonical = evaluate_simple_non_canonical_condition(pairs3_8_dict)
+        #
+        # return pairs2_7_is_simple_non_canonical or pairs3_8_is_simple_non_canonical
+        #
 
 
     def extract_seed_features(self):
         self.seed_match_type()
 
+
+    def get_features(self):
+        f = [self.smt_dic]
+        df = map(lambda x: pd.DataFrame([x]), f)
+        r =  reduce (lambda x,y: pd.concat([x, y], axis=1, sort=False), df)
+        return r
 
 
     def seed_complementary(self, seq1, seq2):
@@ -90,7 +102,10 @@ class SeedFeatures(object):
                    'Seed_match_6mer1GU6': 0,
                    'Seed_match_6mer2GU6': 0,
                    'Seed_match_6mer3GU6': 0,
-                   'Seed_match_6mer_mismatch': 0}
+                   'Seed_match_6mer_LP' : 0,
+                   'Seed_match_6mer_BM': 0,
+                   'Seed_match_6mer_BT': 0}
+
 
         mirna = self.seed.mir_inter
         mrna = self.seed.mrna_inter
@@ -218,15 +233,25 @@ class SeedFeatures(object):
 
 
         # Seed_match_6mer_mismatch
+        #  LP, BM and BT allow one mismatch. LP has one loop, BM has one bulge on miRNA, and BT has one bulge on the target.
+        # Source publication
+        # TBD: check with Isana: mirna[0] + mrna[0] not in c4:
         if self.seed_complementary(mirna[1:8], mrna[1:8])['count_c'] == 6 and \
                 self.seed_complementary(mirna[1:8], mrna[1:8])['count_mismatch'] == 1  \
-                and mirna[0] == 'A' and mirna[0] + mrna[0] not in c4:
-            smt_dic['Seed_match_6mer_mismatch'] = 1
+                and mrna[0] :
+            mir_buldge = mirna[1:8].find(" ")
+            mrna_buldge = mrna[1:8].find(" ")
+            if (mir_buldge==mrna_buldge) :
+                smt_dic['Seed_match_6mer_LP'] = 1
+            elif mir_buldge != -1 :
+                smt_dic['Seed_match_6mer_BM'] = 1
+            else :
+                smt_dic['Seed_match_6mer_BT'] = 1
 
-        if self.seed_complementary(mirna[1:8], mrna[1:8])['count_c'] == 6 and \
-                self.seed_complementary(mirna[1:8], mrna[1:8])['count_mismatch'] == 1  \
-                and mrna[0] == 'A' and mirna[0] + mrna[0] not in c4:
-            smt_dic['Seed_match_6mer_mismatch'] = 1
+           # if self.seed_complementary(mirna[1:8], mrna[1:8])['count_c'] == 6 and \
+           #      self.seed_complementary(mirna[1:8], mrna[1:8])['count_mismatch'] == 1  \
+           #      and mrna[0] == 'A' and mirna[0] + mrna[0] not in c4:
+           #  smt_dic['Seed_match_6mer_mismatch'] = 1
 
 
         ###############################################################
@@ -239,7 +264,6 @@ class SeedFeatures(object):
         classstr = ""
         classstr = classstr + "is canonic : {}\n".format(self.canonic)
         classstr = classstr + "seed type :  {}\n".format(self.seed_type)
-
 
         return classstr
 

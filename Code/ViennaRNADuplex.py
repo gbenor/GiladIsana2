@@ -25,22 +25,9 @@ class ViennaRNADuplex(object):
         self.num_of_pairs = len(self.find_pairing(mir_pairing, '('))
 
         self.IRP = self.parse_interaction()
-       #
-       # # mrna_first_binding_idx =
-       #
-       #  mrna_start_in_full_mrna = full_mrna.find(o_mrna_extended)
-       #  if mrna_start_in_full_mrna == -1 :
-       #      raise Exception("mrna extended doesn't appear in full rna seq")
-       #
-       #  print "&&&&&&&&&&&& mrna_start_in_full_mrna: {}    mrna_start: {}".format(mrna_start_in_full_mrna, mrna_start)
-       #
-       #  mrna_site_loc_start = mrna_start_in_full_mrna + (self.mrna_idx[-1] + self.mrna_coor[0]) - (len(self.mir) - (self.mir_coor[0] + self.mir_idx[-1] + 1))
-       #  mrna_site_loc_end = mrna_start_in_full_mrna + (self.mir_idx[0] + self.mir_coor[0]) + (self.mrna_idx[0] + self.mrna_coor[0])
-       # # mrna_site_loc_end = (len(self.mir) - self.mir_idx[-1]) + (self.mrna_idx[0] + self.mrna_coor[0])
-       #
-       #  site = full_mrna[mrna_site_loc_start:mrna_site_loc_end+1]
-       #  site = site[::-1]
-    #    self.site = site
+
+
+
 
     def find_pairing(self, s, ch):
         return [i for i, ltr in enumerate(s) if ltr == ch]
@@ -59,7 +46,12 @@ class ViennaRNADuplex(object):
             mir_bulge+=self.mir[:self.mir_coor[0]]
             mir_inter+=" "*self.mir_coor[0]
             mrna_inter+=" "*self.mir_coor[0]
+            mrna_addition_len = self.mrna_coor[1]+self.mir_coor[0] - self.mrna_coor[1]
             mrna_bulge_additon=self.mrna[self.mrna_coor[1]:self.mrna_coor[1]+self.mir_coor[0]]
+            mrna_bulge_additon = mrna_bulge_additon + "#" * (mrna_addition_len - len(mrna_bulge_additon))
+
+            # if mrna_bulge_additon == "":
+            #     mrna_bulge_additon="#"*self.mir_coor[0]
             mrna_bulge+=mrna_bulge_additon[::-1]
 
 
@@ -90,8 +82,10 @@ class ViennaRNADuplex(object):
         full_mir = self.mir
         if (mir_i<=len(full_mir)) :
             mir_bulge+=full_mir[mir_i:]
-        if (mrna_i >=0) :
-            mrna_bulge+=mrna[mrna_i::-1]
+            addition = full_mir[mir_i:]
+            mrna_bulge+="*"*len(addition)
+        # if (mrna_i >=0) :
+        #     mrna_bulge+=mrna[mrna_i::-1]
 
         return InteractionRichPresentation (mrna_bulge, mrna_inter, mir_inter, mir_bulge)
 

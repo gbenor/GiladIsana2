@@ -19,9 +19,9 @@ CONFIG = {
 }
 
 files =[{"duplex_method": "vienna",
-         "file_name" :"Data/Human/Parsed/human_clash_data_utr3_with_biomart_seq_vienna.csv"},
+         "file_name" :"Data/Human/Parsed/human_clash_data_utr3_vienna.csv"},
         {"duplex_method": "miranda",
-                         "file_name":"Data/Human/Parsed/human_clash_data_utr3_with_biomart_seq_miranda.csv"}]
+                         "file_name":"Data/Human/Parsed/human_clash_data_utr3_miranda.csv"}]
 
 res =[]
 for f in files:

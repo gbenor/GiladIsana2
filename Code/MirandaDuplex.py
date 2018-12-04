@@ -98,30 +98,29 @@ class MirandaDuplex(object):
             mir_inter = mir_inter.replace ("-", " ")
             mir_bulge = mir_bulge.replace ("-", " ")
 
-            print "miranda"
-            print "--------"
-            print ref
-            print interaction
-            print query
-            print l5.strip()
-            mir_for_vienna = query.replace ("-", "")
-            mrna_for_vienna = ref.replace ("-", "")[::-1]
-
-            print
-            print "Miranda Rich presentation"
-            print "--------------------------"
-            print InteractionRichPresentation(mrna_bulge, mrna_inter, mir_inter, mir_bulge)
-
-            print "Vienna on miranda result"
-            print "-------------------------"
-            print ViennaRNADuplex (mir_for_vienna, mrna_for_vienna)
+            self.miranda_presentation = ""
+            self.miranda_presentation = self.miranda_presentation + "miranda" +"\n"
+            self.miranda_presentation = self.miranda_presentation + "--------"  +"\n"
+            self.miranda_presentation = self.miranda_presentation + ref +"\n"
+            self.miranda_presentation = self.miranda_presentation + interaction +"\n"
+            self.miranda_presentation = self.miranda_presentation + query +"\n"
+            self.miranda_presentation = self.miranda_presentation + l5.strip() +"\n"
+            # mir_for_vienna = query.replace ("-", "")
+            # mrna_for_vienna = ref.replace ("-", "")[::-1]
+            # print "Vienna on miranda result"
+            # print "-------------------------"
+            # print ViennaRNADuplex (mir_for_vienna, mrna_for_vienna)
         else:
             self.num_of_pairs = -1 #No hits
+            raise NoMirandaHits
 
         return InteractionRichPresentation (mrna_bulge, mrna_inter, mir_inter, mir_bulge)
 
     def __str__(self):
-        return str(self.IRP)
+        return self.miranda_presentation + "\n" + str(self.IRP)
 
 
+
+class NoMirandaHits(Exception):
+    pass
 

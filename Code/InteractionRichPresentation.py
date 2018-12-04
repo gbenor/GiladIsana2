@@ -6,7 +6,16 @@ class InteractionRichPresentation (object) :
         self.mrna_inter = mrna_inter
         self.mir_inter = mir_inter
         self.mir_bulge = mir_bulge
+        self.verify_corectness()
+        self.site = self.extract_site()
         self.mir_bulges_count, self.mrna_bulges_count = self.count_bulges()
+
+    def verify_corectness (self):
+        def check_pairs (p1, p2):
+            for i in range (min(len(p1), len(p2))):
+                assert (p1[i]==' ' or p2[i]==' '), "IRP Error. both interaction and bulge have nt value. one of them should be empty (space)."
+        check_pairs(self.mrna_bulge, self.mrna_inter)
+        check_pairs(self.mir_bulge, self.mir_inter)
 
     def interaction_iterator (self):
         i=0
@@ -51,13 +60,32 @@ class InteractionRichPresentation (object) :
             mir_bulge += self.mir_bulge[i]
         return InteractionRichPresentation(mrna_bulge, mrna_inter, mir_inter, mir_bulge)
 
+    def extract_site(self):
+        def first_char (s1, s2):
+            i = 0
+            while s1[i]==" " and s2[i]==" ":
+                i+=1
+            return i
+        # make sure the iterator won't access out of range of the mir variables
+        mrna_site =""
+        mir_len = max(len(self.mir_inter), len(self.mir_bulge))
+        mir_start = first_char(self.mir_inter, self.mir_bulge)
+        for i in range (mir_start, mir_len):
+            try:
+                mrna_site+=self.mix_inter_bulge(self.mrna_inter[i], self.mrna_bulge[i])
+            except IndexError:
+                #probablly the bulge is longer
+                mrna_site+=self.mrna_bulge[i]
+        mrna_site = mrna_site.replace (" ","")
+        return mrna_site
+
     def count_bulges (self) :
         mir_bulges_count = len(self.mir_bulge.split())
         mrna_bulges_count = len(self.mrna_bulge.split())
         return  mir_bulges_count, mrna_bulges_count
 
     def mix_inter_bulge(self, i, b):
-        if i==' ' and b==' ':
+        if i!=' ' and b!=' ':
             raise Exception ("both interaction and bulge have nt value. one of them should be empty (space).")
         return chr(ord(i) + ord(b) - ord(' '))
 
@@ -68,6 +96,9 @@ class InteractionRichPresentation (object) :
         classstr = classstr + "target_interaction: {}\n".format(self.mrna_inter)
         classstr = classstr + "mirna_interaction:  {}\n".format(self.mir_inter)
         classstr = classstr + "mirna_bulge:        {}\n".format(self.mir_bulge)
+        classstr +="\n"
+        classstr = classstr + "site ({}):          {}\n".format(len(self.site), self.site)
+
         #classstr = classstr + "mrna_bulges_count: {} \nmir_bulges_count:  {}\n".format(self.mrna_bulges_count,self.mir_bulges_count)
 
         return classstr
@@ -77,6 +108,10 @@ class InteractionRichPresentation (object) :
         self.mrna_inter = self.mrna_inter.upper().replace('T', 'U')
         self.mir_inter = self.mir_inter.upper().replace('T', 'U')
         self.mir_bulge = self.mir_bulge.upper().replace('T', 'U')
+
+    def set_site(self, site):
+        self.site = site
+
 
     def __str__(self):
         return self.tostring()

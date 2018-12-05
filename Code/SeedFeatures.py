@@ -107,8 +107,39 @@ class SeedFeatures(object):
                    'Seed_match_6mer_BT': 0}
 
 
-        mirna = self.seed.mir_inter
-        mrna = self.seed.mrna_inter
+        # mirna = self.seed.mir_inter
+        # mrna = self.seed.mrna_inter
+
+        # mirna =''
+        # for l, nt in self.seed.mir_iterator():
+        #     mirna += nt
+        # assert len(mirna)==8, "mirna seed is not 8 nt"
+        # mrna = self.seed.site
+        # mrna = mrna + (8-len(mrna))*"*"
+
+        mr=''
+        mi=''
+
+        for i in range(8):
+            if self.seed.mrna_inter[i]!=' ':
+                mr+=self.seed.mrna_inter[i]
+                mi+=self.seed.mir_inter[i]
+                continue
+            if self.seed.mir_bulge[i]!=' ' and self.seed.mrna_bulge[i]!=' ':
+                mr += self.seed.mrna_bulge[i]
+                mi += self.seed.mir_bulge[i]
+                continue
+            if self.seed.mir_bulge[i]!=' ':
+                mi += self.seed.mir_bulge[i]
+                mr += '-'
+                continue
+            mr += self.seed.mrna_bulge[i]
+            mi += '-'
+        mirna = mi
+        mrna = mr
+        # print (self.seed)
+        # print "mrna: " + mr
+        # print "mirna:" + mirna
 
         # # Seed_match_8mer
         if self.seed_complementary(mirna[0:8], mrna[0:8])['count_c'] == 8:
@@ -238,15 +269,15 @@ class SeedFeatures(object):
         # TBD: check with Isana: mirna[0] + mrna[0] not in c4:
         if self.seed_complementary(mirna[1:8], mrna[1:8])['count_c'] == 6 and \
                 self.seed_complementary(mirna[1:8], mrna[1:8])['count_mismatch'] == 1  \
-                and mrna[0] :
-            mir_buldge = mirna[1:8].find(" ")
-            mrna_buldge = mrna[1:8].find(" ")
+                and mrna[0] == 'A':
+            mir_buldge = mirna[1:8].find("-")
+            mrna_buldge = mrna[1:8].find("-")
             if (mir_buldge==mrna_buldge) :
                 smt_dic['Seed_match_6mer_LP'] = 1
             elif mir_buldge != -1 :
-                smt_dic['Seed_match_6mer_BM'] = 1
-            else :
                 smt_dic['Seed_match_6mer_BT'] = 1
+            else :
+                smt_dic['Seed_match_6mer_BM'] = 1
 
            # if self.seed_complementary(mirna[1:8], mrna[1:8])['count_c'] == 6 and \
            #      self.seed_complementary(mirna[1:8], mrna[1:8])['count_mismatch'] == 1  \
@@ -270,3 +301,48 @@ class SeedFeatures(object):
 
     def __str__(self):
         return self.tostring()
+
+
+def test_seed (seed, seed_type):
+    print ("**************************************************")
+    print ("Test: " + seed_type)
+    s = SeedFeatures(seed)
+    s.extract_seed_features()
+    print(s.seed_type)
+    assert seed_type in s.seed_type, "test error"
+
+
+def main ():
+
+    s = InteractionRichPresentation("A       ", " GGGGGGG", " CCCCCCC", "C       ")
+    test_seed(s, "Seed_match_8merA1")
+
+    s = InteractionRichPresentation("A      C", " GGGGGG ", " CCCCCC ", "C      C")
+    test_seed(s, "Seed_match_7merA1")
+
+    s = InteractionRichPresentation("C       ", " GGGGGGG", " CCCCCCC", "C       ")
+    test_seed(s, "Seed_match_7mer2")
+
+    s = InteractionRichPresentation("C      C", " GGGGGG ", " CCCCCC ", "C      C")
+    test_seed(s, "Seed_match_6mer2")
+
+    s = InteractionRichPresentation("A       ", " GGGGGGG", " CCCCUCC", "C       ")
+    test_seed(s, "Seed_match_6mer2GU1")
+
+    s = InteractionRichPresentation("A       ", " GGGGUGG", " CCCCGCC", "C       ")
+    test_seed(s, "Seed_match_6mer2GU1")
+
+    s = InteractionRichPresentation("A    C  ", " GGGG GG", " CCCC CC", "C    C  ")
+    test_seed(s, "Seed_match_6mer_LP")
+
+    s = InteractionRichPresentation("A       ", " GGGG GG", " CCCC CC", "C    C  ")
+    test_seed(s, "Seed_match_6mer_BM")
+
+    s = InteractionRichPresentation("A C       ", " G GGGGGGG", " C CCCCC", "C      ")
+    test_seed(s, "Seed_match_6mer_BT")
+
+
+
+if __name__ == "__main__":
+    main()
+

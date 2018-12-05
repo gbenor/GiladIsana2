@@ -46,7 +46,7 @@ class EnergyAccess(object):
 
         constraint_low = "."*min(mr_site_loc[0],50)
         constraint_site = "x"*len(mrna_site)
-        constraint_high = "."*50
+        constraint_high = "."*min(len(mrna) - mr_site_loc[1], 50)
         constraint = constraint_low + constraint_site + constraint_high
         assert len(constraint)==len(mrna_surrounding100), "constraint and mrna_surrounding100 are not in the same length"
 

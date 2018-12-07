@@ -41,7 +41,10 @@ class EnergyAccess(object):
         MFE_Seed = RNA.fold(mrna_seed)
         MFE_surrounding100 = RNA.fold(mrna_surrounding100)
         MFE_surrounding100_norm = MFE_surrounding100[1] / len(mrna_surrounding100)
-        MEF_duplex = dp.duplex.energy
+        #MEF_duplex = dp.duplex.energy #skip it to support vienna
+        duplex = RNA.duplexfold(dp.mir, mrna_site[::-1])
+        MEF_duplex = duplex.energy
+
         MFE_3p = RNA.fold(mrna_site_3p)
 
         constraint_low = "."*min(mr_site_loc[0],50)
@@ -83,7 +86,7 @@ class EnergyAccess(object):
         f.close()
 
         os.system('RNAplfold -W 80 -L 40 -u 10 < mrna_acc.fa')
-        f = open('plfold_lunp')
+        f = open('plfold_lunp','r')
         ACC_allstr = f.readlines()
         f.close()
 

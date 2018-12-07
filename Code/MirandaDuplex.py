@@ -16,6 +16,7 @@ from itertools import islice
 class MirandaDuplex(object):
 
     def __init__(self, mir, mrna, tmpdir):
+        self.mir = mir
         self.run_miranda(mir, mrna, tmpdir)
         self.IRP = self.parse_miranda_output(self.miranda_out_file)
 
@@ -41,79 +42,70 @@ class MirandaDuplex(object):
         def extract_seq (s):
             return s.split("'")[1].strip()[0:-2]
 
+        def lines_that_contain(string, fp):
+            return [line for line in fp if string in line]
+
+        output=""
+
         fle = open (miranda_file,"r")
         mr = fle.readlines()
         fle.close()
 
-        output=""
-        line_tuples = it.tee(mr, 5)
-        line_tuples[1].next()
-        line_tuples[2].next()
-        line_tuples[2].next()
-        next(islice(line_tuples[3], 3, 3), None)
-        next(islice(line_tuples[4], 4, 4), None)
+        query_list = lines_that_contain("Query:", mr)
+        info_list = lines_that_contain(">", mr)
+        interaction_list = lines_that_contain("|", mr)
+        ref_list = lines_that_contain("Ref:", mr)
 
-        found = False
-        for l1, l2, l3, l4, l5 in it.izip(*line_tuples):
-            if l1.strip().startswith('Query:'):
-                query = extract_seq(l1.strip("\n"))
-                ref = extract_seq(l3.strip("\n"))
-                interaction = l2[l1.find(query):l1.find(query)+len(query)]
-                found = True
-                break
+        if len(query_list)<1:
+            self.num_of_pairs = -1  # No hits
+            raise NoMirandaHits
 
-                # a = [l3.strip("\n"), l2.strip("\n"),l1.strip("\n")]
-                # maxlen = len(max(a, key=len))
-                # a = [x + '^' * (maxlen - len(x))  for x in a]
-                # a = [x[::-1] for x in a]
-                # output += "{}\n{}\n{}\n".format(a[0],a[1],a[2])
-                #
-                # break
+        query = extract_seq(query_list[0].strip("\n"))
+        ref = extract_seq(ref_list[0].strip("\n"))
+        interaction = interaction_list[0][query_list[0].find(query):query_list[0].find(query)+len(query)]
+        c_info = info_list[2].split()
+        site_loc = (int(c_info[6]), int(c_info[7]))
 
         mrna_bulge = ""
         mrna_inter = ""
         mir_inter = ""
         mir_bulge = ""
-        if found :
-            query = query[::-1].upper()
-            ref = ref[::-1].upper()
-            interaction = interaction[::-1]
 
-            self.num_of_pairs = 0
+        query = query[::-1].upper()
+        ref = ref[::-1].upper()
+        interaction = interaction[::-1]
+        self.num_of_pairs = 0
 
-            for i in range (len(interaction)) :
-                if interaction[i] == " " :
-                    mrna_inter += " "
-                    mir_inter += " "
-                    mrna_bulge += ref[i]
-                    mir_bulge += query[i]
-                else :
-                    self.num_of_pairs+=1
-                    mrna_bulge += " "
-                    mrna_inter += ref[i]
-                    mir_inter += query[i]
-                    mir_bulge += " "
-            mrna_bulge = mrna_bulge.replace ("-", " ")
-            mrna_inter = mrna_inter.replace ("-", " ")
-            mir_inter = mir_inter.replace ("-", " ")
-            mir_bulge = mir_bulge.replace ("-", " ")
+        for i in range (len(interaction)) :
+            if interaction[i] == " " :
+                mrna_inter += " "
+                mir_inter += " "
+                mrna_bulge += ref[i]
+                mir_bulge += query[i]
+            else :
+                self.num_of_pairs+=1
+                mrna_bulge += " "
+                mrna_inter += ref[i]
+                mir_inter += query[i]
+                mir_bulge += " "
+        mrna_bulge = mrna_bulge.replace ("-", " ")
+        mrna_inter = mrna_inter.replace ("-", " ")
+        mir_inter = mir_inter.replace ("-", " ")
+        mir_bulge = mir_bulge.replace ("-", " ")
 
-            self.miranda_presentation = ""
-            self.miranda_presentation = self.miranda_presentation + "miranda" +"\n"
-            self.miranda_presentation = self.miranda_presentation + "--------"  +"\n"
-            self.miranda_presentation = self.miranda_presentation + ref +"\n"
-            self.miranda_presentation = self.miranda_presentation + interaction +"\n"
-            self.miranda_presentation = self.miranda_presentation + query +"\n"
-            self.miranda_presentation = self.miranda_presentation + l5.strip() +"\n"
-            # mir_for_vienna = query.replace ("-", "")
-            # mrna_for_vienna = ref.replace ("-", "")[::-1]
-            # print "Vienna on miranda result"
-            # print "-------------------------"
-            # print ViennaRNADuplex (mir_for_vienna, mrna_for_vienna)
-        else:
-            self.num_of_pairs = -1 #No hits
-            raise NoMirandaHits
+        self.miranda_presentation = ""
+        self.miranda_presentation = self.miranda_presentation + "miranda" +"\n"
+        self.miranda_presentation = self.miranda_presentation + "--------"  +"\n"
+        self.miranda_presentation = self.miranda_presentation + ref +"\n"
+        self.miranda_presentation = self.miranda_presentation + interaction +"\n"
+        self.miranda_presentation = self.miranda_presentation + query +"\n"
+        # mir_for_vienna = query.replace ("-", "")
+        # mrna_for_vienna = ref.replace ("-", "")[::-1]
+        # print "Vienna on miranda result"
+        # print "-------------------------"
+        # print ViennaRNADuplex (mir_for_vienna, mrna_for_vienna)
 
+        self.mrna_coor = site_loc
         return InteractionRichPresentation (mrna_bulge, mrna_inter, mir_inter, mir_bulge)
 
     def __str__(self):

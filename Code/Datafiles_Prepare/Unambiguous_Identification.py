@@ -1,5 +1,6 @@
 import BlastUtils
 from pathlib import Path
+import JsonLog
 
 
 import pprint
@@ -7,6 +8,8 @@ from BCBio.GFF import GFFExaminer
 from BCBio import GFF
 from Bio import SeqIO
 from Bio.Seq import Seq
+from Bio import SeqIO
+
 from Bio.SeqRecord import SeqRecord
 from Bio.Blast.Applications import NcbiblastnCommandline
 from Bio.Blast import NCBIXML
@@ -18,16 +21,18 @@ import numpy as np
 
 class Unambiguous_Identification(object):
 
-    def __init__(self, organism, input_file, data_dir):
-        print("Unambiguous Identification of miRNA:Target Site Interactions by Different Types of Ligation Reactions")
-        print ("https://www.sciencedirect.com/science/article/pii/S1097276514003566#app3")
-        print("#############################################")
-        print("Organism: {}".format(organism))
-        print("#############################################")
-
+    def __init__(self, organism, input_file, data_dir, run_as_service=False):
+        self.run_as_service = run_as_service
         self.log =[]
-        self.log.append("Unambiguous Identification of miRNA:Target Site Interactions by Different Types of Ligation Reactions")
-        self.log.append("Organism: {}".format(organism))
+        if not run_as_service:
+            print("Unambiguous Identification of miRNA:Target Site Interactions by Different Types of Ligation Reactions")
+            print ("https://www.sciencedirect.com/science/article/pii/S1097276514003566#app3")
+            print("#############################################")
+            print("Organism: {}".format(organism))
+            print("#############################################")
+
+            self.log.append("Unambiguous Identification of miRNA:Target Site Interactions by Different Types of Ligation Reactions")
+            self.log.append("Organism: {}".format(organism))
 
         self.organism = organism
         self.input_file = input_file
@@ -39,6 +44,7 @@ class Unambiguous_Identification(object):
 
     def Unambiguous_Identification_Files (self):
         self.blast_db_fasta_biomart = str(self.data_dir / Path (self.organism +"_biomart.fasta"))
+        self.blast_db_fasta_biomart_valid = str(self.data_dir / Path (self.organism +"_biomart_valid.fasta"))
         self.blast_db_biomart = str(self.data_dir / "blast_files"  / "blastdb")
         self.blast_tmp = str(self.data_dir / "blast_files" /"tmp" / "tmp_result.xml")
         self.blast_result = str(self.data_dir / Path (self.organism +"_blast.csv"))
@@ -55,16 +61,33 @@ class Unambiguous_Identification(object):
         current_sheet = self.sheets[self.organism]
 
         # Read the interaction file
-        inter_df = pd.read_excel(self.input_file, sheet_name=current_sheet, header=None)
-        assert self.organism in inter_df.iloc[0, 0].lower(), "Read the wrong sheet. no {} in the first cell".format(self.organism)
-        self.inter_df = pd.read_excel(self.input_file, sheet_name=current_sheet, skiprows=3)
+        if not self.run_as_service:
+            inter_df = pd.read_excel(self.input_file, sheet_name=current_sheet, header=None)
+            assert self.organism in inter_df.iloc[0, 0].lower(), "Read the wrong sheet. no {} in the first cell".format(self.organism)
+            self.inter_df = pd.read_excel(self.input_file, sheet_name=current_sheet, skiprows=3)
+        else:
+            self.inter_df = pd.read_csv(self.input_file)
+
         self.log.append("File information:")
         self.log.append("Num of samples: {}".format(self.inter_df.shape[0]))
 
 
 
     def create_blast_db(self):
-        BlastUtils.create_blast_db(self.blast_db_fasta_biomart, self.blast_db_biomart)
+        fasta_sequences = SeqIO.parse(open(self.blast_db_fasta_biomart), 'fasta')
+        valid_seq = []
+        c = 0
+        for s in fasta_sequences:
+            c+=1
+            if s.seq != 'Sequenceunavailable':
+                valid_seq.append(s)
+        SeqIO.write(valid_seq, self.blast_db_fasta_biomart_valid, 'fasta')
+        print ("Finish filtering Biomart fasta")
+        print ("Total Biomart seq: {}".format(c))
+        print ("Valid Biomart seq: {}".format(len (valid_seq)))
+
+        BlastUtils.create_blast_db(self.blast_db_fasta_biomart_valid, self.blast_db_biomart)
+
 
     def blast_mRNA(self):
         blast_db_biomart = self.blast_db_biomart
@@ -121,24 +144,27 @@ class Unambiguous_Identification(object):
 
         # Choose the necessary columns
         in_df_filter = in_df.filter(
-            ['Source', 'Organism', 'miRNA ID', 'miRNA sequence', 'target sequence', 'biomart_title', 'biomart_sbjct_start',
-             'biomart_sbjct_end', 'full_mrna'], axis=1)
+            ['Source', 'Organism', 'miRNA ID', 'miRNA sequence', 'target sequence', 'number of reads',
+             'biomart_title', 'biomart_sbjct_start', 'biomart_sbjct_end', 'full_mrna'], axis=1)
 
-        # in_df_filter.rename(columns={'miR_ID': 'microRNA_name', 'mrna_name': 'mRNA_name', 'Start_position': 'mRNA_start',
-        #                       'End_position': 'mRNA_end_extended', 'Unnamed: 0.1.1': 'seq_ID'}, inplace=True)
-        #
+        in_df_filter.rename(columns={'miRNA ID': 'microRNA_name', 'biomart_title': 'mRNA_name', 'biomart_sbjct_start': 'mRNA_start',
+                              'biomart_sbjct_end': 'mRNA_end'}, inplace=True)
+
 
         # reset the index
         in_df_filter.reset_index(drop=True, inplace=True)
         self.log.append("miRNA statistics")
-        self.log.append(dict(in_df_filter['miRNA ID'].value_counts()))
+        self.log.append(dict(in_df_filter['microRNA_name'].value_counts()))
 
         # save to file
-        in_df_filter.to_csv(self.final_output)
-        output_f = Path(self.final_output)
-        with open(output_f.parent / Path(output_f.stem + ".info"), 'w') as file_handler:
-            for item in self.log:
-                file_handler.write("{}\n".format(item))
+        if not self.run_as_service:
+            in_df_filter.to_csv(self.final_output)
+            output_f = Path(self.final_output)
+            with open(output_f.parent / Path(output_f.stem + ".info"), 'w') as file_handler:
+                for item in self.log:
+                    file_handler.write("{}\n".format(item))
+        else:
+            return  in_df_filter, self.log
 
     def run (self):
         #####################################################
@@ -157,35 +183,37 @@ class Unambiguous_Identification(object):
         self.add_full_mRNA()
 
 
-        #####################################################
-        # Reformatting the file, to match to the next pipeline step
-        #####################################################
-        self.file_formatting()
-
 
 def main ():
     interaction_file = str(Path("Raw/1-s2.0-S1097276514003566-mmc3.xls"))
+    log_dir = "Logs/Datafiles_Prepare/"
 
     #####################################################
     # Celegans
     #####################################################
-    # p_dir = Path ("Celegans/Raw")
-    # ce = Unambiguous_Identification ("elegans", interaction_file, p_dir)
-    # ce.run()
+    p_dir = Path ("Celegans/Raw")
+    JsonLog.set_filename(log_dir/"Unambiguous_Identification_Celegans.json")
+    JsonLog.add_to_json('file name', interaction_file)
+    ce = Unambiguous_Identification ("elegans", interaction_file, p_dir)
+    ce.run()
+    ce.file_formatting()
+
 
     #####################################################
     # Mouse
     #####################################################
-    # p_dir = Path ("Mouse/Raw")
-    # mo = Unambiguous_Identification ("mouse", interaction_file, p_dir)
+    p_dir = Path ("Mouse/Raw")
+    mo = Unambiguous_Identification ("mouse", interaction_file, p_dir)
     # mo.run()
+    mo.file_formatting()
 
     #####################################################
     # Human
     #####################################################
     p_dir = Path ("Human/Raw")
     ho = Unambiguous_Identification ("human", interaction_file, p_dir)
-    ho.run()
+    # ho.run()
+    ho.file_formatting()
 
 
 

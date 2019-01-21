@@ -23,7 +23,6 @@ class Unambiguous_Identification(object):
 
     def __init__(self, organism, input_file, data_dir, run_as_service=False):
         self.run_as_service = run_as_service
-        self.log =[]
         if not run_as_service:
             print("Unambiguous Identification of miRNA:Target Site Interactions by Different Types of Ligation Reactions")
             print ("https://www.sciencedirect.com/science/article/pii/S1097276514003566#app3")
@@ -31,8 +30,8 @@ class Unambiguous_Identification(object):
             print("Organism: {}".format(organism))
             print("#############################################")
 
-            self.log.append("Unambiguous Identification of miRNA:Target Site Interactions by Different Types of Ligation Reactions")
-            self.log.append("Organism: {}".format(organism))
+            JsonLog.add_to_json('paper', "Unambiguous Identification of miRNA:Target Site Interactions by Different Types of Ligation Reactions")
+            JsonLog.add_to_json('Organism', organism)
 
         self.organism = organism
         self.input_file = input_file
@@ -68,8 +67,7 @@ class Unambiguous_Identification(object):
         else:
             self.inter_df = pd.read_csv(self.input_file)
 
-        self.log.append("File information:")
-        self.log.append("Num of samples: {}".format(self.inter_df.shape[0]))
+        JsonLog.add_to_json('Num of samples', self.inter_df.shape[0])
 
 
 
@@ -83,8 +81,8 @@ class Unambiguous_Identification(object):
                 valid_seq.append(s)
         SeqIO.write(valid_seq, self.blast_db_fasta_biomart_valid, 'fasta')
         print ("Finish filtering Biomart fasta")
-        print ("Total Biomart seq: {}".format(c))
-        print ("Valid Biomart seq: {}".format(len (valid_seq)))
+        JsonLog.add_to_json("Total Biomart seq", c)
+        JsonLog.add_to_json("Valid Biomart seq", len (valid_seq))
 
         BlastUtils.create_blast_db(self.blast_db_fasta_biomart_valid, self.blast_db_biomart)
 
@@ -129,17 +127,18 @@ class Unambiguous_Identification(object):
         in_df = pd.read_csv(self.blast_with_mRNA)
         in_df['Source'] = "Unambiguous_Identification"
         in_df['Organism'] = self.organism
+        in_df['Creation_time'] = JsonLog.get_creation_time()
 
         # Take only the valid rows: Status=OK
         valid_rows = in_df['blast_status']=="OK"
-        self.log.append("Num of valid blast results: {}".format(sum(valid_rows)))
-        self.log.append("discarding: {}".format(in_df.shape[0] - sum(valid_rows)))
+        JsonLog.add_to_json("valid blast results", sum(valid_rows))
+        JsonLog.add_to_json("invalid blast results",(in_df.shape[0] - sum(valid_rows)))
         in_df = in_df[valid_rows]
 
         #Remove miRNA with XXX
         rows_without_XXX = in_df['miRNA sequence'].apply(lambda x: x.find('X')==-1)
-        self.log.append("Num of valid miRNA: {}".format(sum(rows_without_XXX)))
-        self.log.append("discarding (xxx miRNA): {}".format(in_df.shape[0] - sum(rows_without_XXX)))
+        JsonLog.add_to_json("valid miRNA" ,sum(rows_without_XXX))
+        JsonLog.add_to_json("invalid miRNA (xxx)",(in_df.shape[0] - sum(rows_without_XXX)))
         in_df = in_df[rows_without_XXX]
 
         # Choose the necessary columns
@@ -153,18 +152,14 @@ class Unambiguous_Identification(object):
 
         # reset the index
         in_df_filter.reset_index(drop=True, inplace=True)
-        self.log.append("miRNA statistics")
-        self.log.append(dict(in_df_filter['microRNA_name'].value_counts()))
+        # self.log.append("miRNA statistics")
+        # self.log.append(dict(in_df_filter['microRNA_name'].value_counts()))
 
         # save to file
         if not self.run_as_service:
             in_df_filter.to_csv(self.final_output)
-            output_f = Path(self.final_output)
-            with open(output_f.parent / Path(output_f.stem + ".info"), 'w') as file_handler:
-                for item in self.log:
-                    file_handler.write("{}\n".format(item))
         else:
-            return  in_df_filter, self.log
+            return in_df_filter
 
     def run (self):
         #####################################################
@@ -192,7 +187,7 @@ def main ():
     # Celegans
     #####################################################
     p_dir = Path ("Celegans/Raw")
-    JsonLog.set_filename(log_dir/"Unambiguous_Identification_Celegans.json")
+    JsonLog.set_filename(Path(log_dir)/"Unambiguous_Identification_Celegans.json")
     JsonLog.add_to_json('file name', interaction_file)
     ce = Unambiguous_Identification ("elegans", interaction_file, p_dir)
     ce.run()
@@ -203,16 +198,20 @@ def main ():
     # Mouse
     #####################################################
     p_dir = Path ("Mouse/Raw")
+    JsonLog.set_filename(Path(log_dir) /"Unambiguous_Identification_mouse.json")
+    JsonLog.add_to_json('file name', interaction_file)
     mo = Unambiguous_Identification ("mouse", interaction_file, p_dir)
-    # mo.run()
+    mo.run()
     mo.file_formatting()
 
     #####################################################
     # Human
     #####################################################
     p_dir = Path ("Human/Raw")
+    JsonLog.set_filename(Path(log_dir) / "Unambiguous_Identification_human.json")
+    JsonLog.add_to_json('file name', interaction_file)
     ho = Unambiguous_Identification ("human", interaction_file, p_dir)
-    # ho.run()
+    ho.run()
     ho.file_formatting()
 
 

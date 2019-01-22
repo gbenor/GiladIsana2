@@ -26,3 +26,5 @@ def set_filename (f):
 def get_creation_time ():
     return Creation_time
 
+def json_print ():
+    print (json.dumps(data))

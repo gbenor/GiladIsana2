@@ -114,11 +114,11 @@ class mirmark(object):
 
         #Choose the necessary columns
         in_df_filter = in_df.filter(
-            ['Source', 'Organism', 'miR_ID', 'miRNA_seq', 'mRNA_ID', 'target', 'number of reads',
+            ['Source', 'Organism', 'miR_ID', 'miRNA_seq',  'target', 'number of reads', 'mRNA_ID',
              'Start_position', 'End_position', 'full_mrna_seq'], axis=1)
 
-        in_df_filter.rename(columns={'miR_ID': 'microRNA_name', 'mRNA_ID': 'mRNA_name', 'Start_position': 'mRNA_start',
-                              'End_position': 'mRNA_end','full_mrna_seq': 'full_mrna'}, inplace=True)
+        in_df_filter.rename(columns={'miR_ID': 'microRNA_name', 'mRNA_ID': 'mRNA_name', 'miRNA_seq' :'miRNA sequence', 'Start_position': 'mRNA_start',
+                              'End_position': 'mRNA_end','full_mrna_seq': 'full_mrna','target': 'target sequence'}, inplace=True)
 
 
         # reset the index

@@ -46,7 +46,7 @@ class Pairing_Beyond_Seed(object):
         self.mirbase_fasta = "all_mature_miRNA.fa"
         self.pairing_beyond_to_unambiguous_identification = "Celegans/Raw/pairing_beyond_to_unambiguous_identification.csv"
         self.unambiguous_output = str(self.data_dir / Path (self.organism + "_Pairing_Beyond_Seed_unambiguous_output.csv"))
-        self.final_output = str(self.data_dir / Path (self.organism + "_Pairing_Beyond_Seed_Data.csv"))
+        self.final_output = str("Datafiles_Prepare/CSV"/  Path (self.organism + "_Pairing_Beyond_Seed_Data.csv"))
 
 
     def read_paper_data(self):
@@ -142,7 +142,7 @@ class Pairing_Beyond_Seed(object):
 def main ():
 
     Pasquinelli_data = "Raw/1-s2.0-S1097276516305214-mmc3.xlsx"
-    log_dir = "Logs/Datafiles_Prepare/"
+    log_dir = "Datafiles_Prepare/Logs/"
 
     #####################################################
     # Celegans

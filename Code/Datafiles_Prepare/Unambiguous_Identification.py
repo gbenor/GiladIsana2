@@ -48,7 +48,7 @@ class Unambiguous_Identification(object):
         self.blast_tmp = str(self.data_dir / "blast_files" /"tmp" / "tmp_result.xml")
         self.blast_result = str(self.data_dir / Path (self.organism +"_blast.csv"))
         self.blast_with_mRNA = str(self.data_dir / Path (self.organism +"_mRNA.csv"))
-        self.final_output = str(self.data_dir / Path (self.organism + "_Unambiguous_Identification_Data.csv"))
+        self.final_output = str("Datafiles_Prepare/CSV"/ Path (self.organism + "_Unambiguous_Identification_Data.csv"))
 
 
     def read_paper_data(self):
@@ -181,7 +181,7 @@ class Unambiguous_Identification(object):
 
 def main ():
     interaction_file = str(Path("Raw/1-s2.0-S1097276514003566-mmc3.xls"))
-    log_dir = "Logs/Datafiles_Prepare/"
+    log_dir = "Datafiles_Prepare/Logs/"
 
     #####################################################
     # Celegans

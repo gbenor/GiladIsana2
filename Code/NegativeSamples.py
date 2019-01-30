@@ -31,10 +31,11 @@ class NegativeSamples(object):
             if mi_name.startswith('hsa'):
                 miRBase_dic[ma_name] = [mi_name, mi_seq]
                 miRBase_seq_list.append(mi_seq)
-        print 'number of entrences in miRBase: ', len(miRBase_dic)
+        print ('number of entrences in miRBase: ', len(miRBase_dic))
         self.miRBase_seq_list = miRBase_seq_list
         self.miRBase_dic = miRBase_dic
-#
+
+    #
     # # # 2. the positive pairs in CLASH experiments
     # f = open('data2/S2/S2_final_pairs_dic.pkl')
     # S2_final_pairs_dic = pk.load(f)
@@ -66,7 +67,7 @@ class NegativeSamples(object):
             random.shuffle(mirna_list_r)
             num_shuffle += 1
             if num_shuffle % 10000 == 0:
-                print num_shuffle
+                print (num_shuffle)
             if num_shuffle > 100000:
                 break
 
@@ -82,45 +83,71 @@ class NegativeSamples(object):
         return mirna_m
 
 
-    def valid_negative_sample(self, mir, mrna, duplex_method):
-        if duplex_method == "vienna":
-            dp = ViennaRNADuplex(mir, mrna)
-        if duplex_method == "miranda":
-            dp = MirandaDuplex(mir, mrna, "Data/Human/Parsed")
+    def valid_negative_seq(self, mir, mrna, num_of_pairs=11, check_seed=True):
+        dp = ViennaRNADuplex(mir, mrna)
+        if check_seed:
+            c_seed = dp.IRP.extract_seed()
+            seed_feature = SeedFeatures (c_seed)
+            seed_valid = seed_feature.canonic != "None"
+        else:
+            seed_valid = True
 
-        c_seed = dp.IRP.extract_seed()
-        seed_feature = SeedFeatures (c_seed)
+        pairs_valid = dp.num_of_pairs > num_of_pairs
 
-        return seed_feature.canonic != "None"
+        return seed_valid and pairs_valid
 
-    def generate_negative_samples (self, pos_file, neg_file, duplex_method, num_of_tries=10000):
+    def generate_negative_seq (self, pos_file, output, num_of_pairs=11, check_seed=True, seq_per_row=3, num_of_tries=10000):
+        print ("start negative seq:\nnum_of pairs {}\nseed {}".format(num_of_pairs,check_seed))
         pos = pd.read_csv(pos_file)
         neg = pd.DataFrame()
 
+
+
+        row_num = 0
+
         for index, row in pos.iterrows():
-            valid = False
-            for i in range(num_of_tries):
-                print "negative sample, try num {}".format(i)
-                mock_mirna = self.generate_mirna_mock(row.miRNA_seq)
-                full_mrna = row.full_mrna_seq
-                if self.valid_negative_sample (mock_mirna, full_mrna, duplex_method):
-                    valid = True
-                    break
 
-            if not valid:
-                print ("Couldnt manage to create negative sample to row {}".format(row.seq_ID))
-                continue
+            print (index)
+            for k in range(seq_per_row):
+                valid = False
+                for i in range(num_of_tries):
+                    mock_mirna = self.generate_mirna_mock(row.miRNA_seq).replace('U', 'T')
+                    full_mrna = row.full_mrna_seq
+                    try:
+                        valid = self.valid_negative_seq (mock_mirna, full_mrna, num_of_pairs, check_seed)
+                        if valid:
+                            break
+                    except IndexError:
+                        valid = False
 
-            neg.loc[index, 'seq_ID'] = row.seq_ID
-            neg.loc[index, 'microRNA_name'] = "mock " + row.microRNA_name
-            neg.loc[index, 'miRNA_seq'] = mock_mirna
-            neg.loc[index, 'mRNA_name'] = row.mRNA_name
-            neg.loc[index, 'mRNA_seq_extended'] = row.full_mrna_seq
-            neg.loc[index, 'full_mrna_seq'] = row.full_mrna_seq
-            neg.loc[index, 'full_mrna_seq_match_start'] = 0
+                if not valid:
+                    print ("Couldnt manage to create negative sample to row {}".format(row.seq_ID))
+                    continue
 
+                # #add the seq to the Dataframe
+                # new_row = pd.DataFrame()
+                # new_row.loc[0, 'seq_ID'] = row.seq_ID
+                # new_row.loc[0, 'microRNA_name'] = "mock " + row.microRNA_name
+                # new_row.loc[0, 'miRNA_seq'] = mock_mirna
+                # new_row.loc[0, 'mRNA_name'] = row.mRNA_name
+                # new_row.loc[0, 'mRNA_seq_extended'] = row.full_mrna_seq
+                # new_row.loc[0, 'full_mrna_seq'] = row.full_mrna_seq
+                # new_row.loc[0, 'full_mrna_seq_match_start'] = 0
 
-        neg.to_csv(neg_file)
+                # add the seq to the Dataframe
+                neg.loc[row_num, 'seq_ID'] = row.seq_ID
+                neg.loc[row_num, 'microRNA_name'] = "mock " + row.microRNA_name
+                neg.loc[row_num, 'miRNA_seq'] = mock_mirna
+                neg.loc[row_num, 'mRNA_name'] = row.mRNA_name
+                neg.loc[row_num, 'mRNA_seq_extended'] = row.full_mrna_seq
+                neg.loc[row_num, 'full_mrna_seq'] = row.full_mrna_seq
+                neg.loc[row_num, 'full_mrna_seq_match_start'] = 0
+                row_num+=1
+
+         #   neg = pd.concat([neg, new_row], sort=False)
+
+        neg.reset_index(drop=True, inplace=True)
+        neg.to_csv(output)
 
 
 def main():

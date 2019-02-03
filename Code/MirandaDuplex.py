@@ -24,9 +24,9 @@ class MirandaDuplex(object):
 
 
     def run_miranda (self, mir, mrna, tmpdir):
-        mrna_fasta_filename = tmpdir + "/tmp_mrna.fasta"
-        mirna_fasta_filename = tmpdir + "/tmp_mirna.fasta"
-        miranda_out = tmpdir + "/miranda_out.txt"
+        mrna_fasta_filename = tmpdir + "/tmp_mrna{}.fasta".format(os.getpid())
+        mirna_fasta_filename = tmpdir + "/tmp_mirna{}.fasta".format(os.getpid())
+        miranda_out = tmpdir + "/miranda_out{}.txt".format(os.getpid())
 
         mRNA_record = SeqRecord(Seq(mrna), description="mRNA")
         miRNA_record = SeqRecord(Seq(mir), description="miRNA")

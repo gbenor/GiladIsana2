@@ -16,12 +16,17 @@ from pathlib import Path
 from Utils import *
 from NegativeSamples import *
 import JsonLog
+import itertools
+from multiprocessing import Pool
+import multiprocessing
+
 
 
 
 CONFIG = {
     'minimum_pairs_for_interaction': 11,
-    'duplex_method' :  ["vienna", "miranda"]
+    'duplex_method' :  ["vienna", "miranda"],
+    'max_process' : 1
  #   'duplex_method': ["vienna", "miranda", "vienna_with_constraint"]
 
     #'duplex_method' :  ["miranda"]
@@ -123,6 +128,56 @@ def extract_features (row, duplex_method, minimum_pairs_for_interaction):
 # return df
 
 
+def worker (w):
+    f, dm = w
+    #, output_dir, log_dir):
+
+    output_dir = Path("Data/Features/CSV")
+    log_dir = Path("Data/Features/Logs")
+
+    print ("Starting worker #{}".format(multiprocessing.current_process()))
+    in_df = pd.read_csv(f)
+    pos_valid_seed_df = pd.DataFrame()
+    pos_all_seed_df = pd.DataFrame()
+
+
+    invalid_duplex = 0
+    # i=0
+    for index, row in in_df.iterrows():
+        # i+=1
+        # if i> 3:
+        #     continue
+        valid_duplex, valid_seed, feature_row = extract_features(row, dm, CONFIG['minimum_pairs_for_interaction'])
+        if not valid_duplex:
+            invalid_duplex += 1
+            continue
+        pos_all_seed_df = pd.concat([pos_all_seed_df, feature_row], sort=False)
+        if valid_seed:
+            pos_valid_seed_df = pd.concat([pos_valid_seed_df, feature_row], sort=False)
+
+    pos_all_seed_df.reset_index(drop=True, inplace=True)
+    pos_valid_seed_df.reset_index(drop=True, inplace=True)
+    pos_all_seed_file = filename_date_append(output_dir / "{}_{}_pos_all_seeds.csv".format(f.stem, dm))
+    pos_valid_seed_file = filename_date_append(output_dir / "{}_{}_pos_valid_seeds.csv".format(f.stem, dm))
+    pos_all_seed_df.to_csv(pos_all_seed_file)
+    pos_valid_seed_df.to_csv(pos_valid_seed_file)
+
+    JsonLog.set_filename(Path(log_dir) / "{}.json".format(pos_all_seed_file.stem))
+    JsonLog.add_to_json("source", f.stem)
+    JsonLog.add_to_json("duplex_method", dm)
+    JsonLog.add_to_json("label", "Positive")
+    JsonLog.add_to_json("input size", in_df.shape[0])
+    JsonLog.add_to_json("invalid duplex", invalid_duplex)
+    JsonLog.add_to_json("output size", pos_all_seed_df.shape[0])
+
+    JsonLog.set_filename(Path(log_dir) / "{}.json".format(pos_valid_seed_file.stem))
+    JsonLog.add_to_json("input size", in_df.shape[0])
+    JsonLog.add_to_json("invalid duplex", invalid_duplex)
+    JsonLog.add_to_json("output size", pos_valid_seed_df.shape[0])
+
+    print ("invalid duplex {}".format(invalid_duplex))
+    print ("Finish worker #{}".format(multiprocessing.current_process()))
+
 
 
 
@@ -130,57 +185,19 @@ def main():
     #  sudo /sbin/service sshd start
 
     input_dir = Path("Data/Datafiles_Prepare/CSV")
-    output_dir = Path("Data/Features/CSV")
-    log_dir = Path("Data/Features/Logs")
+    # output_dir = Path("Data/Features/CSV")
+    # log_dir = Path("Data/Features/Logs")
 
 
     duplex_method = CONFIG['duplex_method']
-    for f in input_dir.iterdir():
-        print ("*"*80)
-        print (f)
-        in_df = pd.read_csv(f)
-        pos_valid_seed_df = pd.DataFrame()
-        pos_all_seed_df = pd.DataFrame()
+    f = list(input_dir.iterdir())
+    all_work = list(itertools.product(f, duplex_method))
 
-        for dm in duplex_method:
-            invalid_duplex = 0
-            i=0
-            for index, row in in_df.iterrows():
-                i+=1
+    p = Pool(CONFIG['max_process'])
+    p.map(worker, all_work)
+    p.close()
+    p.join()
 
-                if i>3:
-                    continue
-
-                valid_duplex, valid_seed, feature_row = extract_features(row, dm, CONFIG['minimum_pairs_for_interaction'])
-                if not valid_duplex:
-                    invalid_duplex+=1
-                    continue
-                pos_all_seed_df = pd.concat([pos_all_seed_df, feature_row], sort=False)
-                if valid_seed:
-                    pos_valid_seed_df = pd.concat([pos_valid_seed_df, feature_row], sort=False)
-
-            pos_all_seed_df.reset_index(drop=True, inplace=True)
-            pos_valid_seed_df.reset_index(drop=True, inplace=True)
-            pos_all_seed_file = filename_date_append(output_dir / "{}_{}_pos_all_seeds.csv".format(f.stem, dm))
-            pos_valid_seed_file = filename_date_append(output_dir / "{}_{}_pos_valid_seeds.csv".format(f.stem, dm))
-            pos_all_seed_df.to_csv(pos_all_seed_file)
-            pos_valid_seed_df.to_csv(pos_valid_seed_file)
-
-            JsonLog.set_filename(Path(log_dir) / "{}.json".format(pos_all_seed_file.stem))
-            JsonLog.add_to_json("source", f.stem)
-            JsonLog.add_to_json("duplex_method", dm)
-            JsonLog.add_to_json("label", "Positive")
-            JsonLog.add_to_json("input size", in_df.shape[0])
-            JsonLog.add_to_json("invalid duplex", invalid_duplex)
-            JsonLog.add_to_json("output size", pos_all_seed_df.shape[0])
-
-            JsonLog.set_filename(Path(log_dir) / "{}.json".format(pos_valid_seed_file.stem))
-            JsonLog.add_to_json("input size", in_df.shape[0])
-            JsonLog.add_to_json("invalid duplex", invalid_duplex)
-            JsonLog.add_to_json("output size", pos_valid_seed_df.shape[0])
-
-            #tbd : json update invalid_duplex
-            print ("invalid duplex {}".format(invalid_duplex))
     exit (7)
 
     negative_seq = True

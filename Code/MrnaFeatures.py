@@ -101,6 +101,7 @@ class MrnaFeatures(object):
                 count_CG += 1
             elif mrna[i:i + 2] == 'CC':
                 count_CC += 1
+
         all_monomer_count = count_A + count_U + count_G + count_C
         all_dimer_count = count_AA + count_AU + count_AG + count_AC + \
                           count_UA + count_UU + count_UG + count_UC + \

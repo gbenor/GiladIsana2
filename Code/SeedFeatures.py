@@ -7,41 +7,6 @@ class SeedFeatures(object):
     def __init__(self, seed):
         self.seed = seed
         self.seed.replace_T_U()
-        if self.is_canonical() :
-            self.canonic = "Canonic"
-        elif self.is_simple_non_canonical() :
-            self.canonic = "Simple Non-Canonic"
-        else:
-            self.canonic = "None"
-
-    def is_canonical (self) :
-        #exact W-C pairing of 2-7 or 3-8 nts of mirna
-        mirna = self.seed.mir_inter
-        mrna = self.seed.mrna_inter
-
-        pairs2_7 = self.seed_complementary(mirna[1:7], mrna[1:7])['count_c']
-        pairs3_8 = self.seed_complementary(mirna[2:8], mrna[2:8])['count_c']
-        return pairs2_7==6 or pairs3_8==6
-
-    def is_simple_non_canonical (self):
-        #at least six pairs within the seed
-        pairs = list(self.seed.mir_pairing_iterator())
-        return len(list(filter(lambda x: x.find(" ") == -1, pairs)))>=6
-
-        #
-        # #pairing at positions 2-7 or 3-8, allowing G-U pairs and up to one bulged or mismatched nucleotide
-        # def evaluate_simple_non_canonical_condition (dict):
-        #     return (dict['count_mismatch'] <= 1) and ((dict['count_c'] + dict['count_w']) >= 5)
-        #
-        # mirna = self.seed.mir_inter
-        # mrna = self.seed.mrna_inter
-        # pairs2_7_dict = self.seed_complementary(mirna[1:7], mrna[1:7])
-        # pairs2_7_is_simple_non_canonical = evaluate_simple_non_canonical_condition (pairs2_7_dict)
-        # pairs3_8_dict = self.seed_complementary(mirna[2:8], mrna[2:8])
-        # pairs3_8_is_simple_non_canonical = evaluate_simple_non_canonical_condition(pairs3_8_dict)
-        #
-        # return pairs2_7_is_simple_non_canonical or pairs3_8_is_simple_non_canonical
-        #
 
 
     def extract_seed_features(self):

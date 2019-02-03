@@ -53,8 +53,8 @@ class EnergyAccess(object):
         constraint = constraint_low + constraint_site + constraint_high
         assert len(constraint)==len(mrna_surrounding100), "constraint and mrna_surrounding100 are not in the same length"
 
-        mrna100file_in = 'mrna100_with_constraints.fa'
-        mrna100file_out = 'mrna100_with_constraints.result'
+        mrna100file_in = 'mrna100_with_constraints{}.fa'.format(os.getpid())
+        mrna100file_out = 'mrna100_with_constraints{}.result'.format(os.getpid())
         f = open(mrna100file_in, 'w')
         f.write(mrna_surrounding100 + "\n" + constraint + "\n")
         f.close()
@@ -81,11 +81,13 @@ class EnergyAccess(object):
 
     # # 6. target site accessibility  (370)
     def accessibility(self, mrna, mr_site_loc):  # 37*10 = 370
-        f = open('mrna_acc.fa', 'w')
+        acc_file ="mrna_acc{}.fa".format(os.getpid())
+
+        f = open(acc_file, 'w')
         f.write(mrna.replace('-', '') + '\n')
         f.close()
 
-        os.system('RNAplfold -W 80 -L 40 -u 10 < mrna_acc.fa')
+        os.system('RNAplfold -W 80 -L 40 -u 10 < {}'.format(acc_file))
         f = open('plfold_lunp','r')
         ACC_allstr = f.readlines()
         f.close()
@@ -105,7 +107,7 @@ class EnergyAccess(object):
             for j in range(1, 11):
                 key = 'Acc_P%s_%sth' % (str(i), str(j))
                 ACC[key] = float(acc_score_matrix_segment[i - 1][j])
-        os.remove('mrna_acc.fa')
+        os.remove(acc_file)
         os.remove('plfold_lunp')
         os.remove('plfold_dp.ps')
         return ACC

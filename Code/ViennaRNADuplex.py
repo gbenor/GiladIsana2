@@ -2,13 +2,40 @@ import RNA
 from collections import Counter
 #from SeedFeatures import *
 from InteractionRichPresentation import *
+import os
+import pandas as pd
+
+
+class Duplex(object):
+    def __init__(self, structure, i,j, energy):
+        self.structure = structure
+        self.i = i
+        self.j = j
+        self.energy = energy
+
+
 
 class ViennaRNADuplex(object):
 
-    def __init__(self, o_mir, o_mrna_extended):
+    def __init__(self, o_mir, o_mrna_extended,constraint=None):
         self.mir = o_mir
         self.mrna = o_mrna_extended
-        self.duplex = RNA.duplexfold(self.mir, self.mrna)
+        self.constraint = constraint
+
+        v_dp = RNA.duplexfold(self.mir, self.mrna)
+        c_dp = self.RNAplex(self.mir, self.mrna, constraint=constraint)
+        self.equal = self.duplex_equal(v_dp, c_dp)
+
+        # if constraint:
+        #     if self.equal:
+        #         print ("although the constraint, the duplex are equal.")
+        #     else:
+        #         print ("great success. the duplex are not equal")
+        # else:
+        #     assert self.equal, "The duplex are not equal {} {} {} {} {} {}".format(v_dp.i, c_dp.i,v_dp.j, c_dp.j,v_dp.structure, c_dp.structure)
+
+        self.duplex = c_dp
+        # self.duplex = c_dp if constraint else v_dp
         self.duplex_score = -self.duplex.energy
 
         (mir_pairing, mrna_pairing) = self.duplex.structure.split('&')
@@ -25,6 +52,73 @@ class ViennaRNADuplex(object):
         self.num_of_pairs = len(self.find_pairing(mir_pairing, '('))
 
         self.IRP = self.parse_interaction()
+
+    def get_features(self):
+        d0 = 1 if self.constraint else 0
+        d1 = 1 if self.equal else 0
+        return pd.DataFrame(data=[[d0, d1]], columns=["constraint", "duplex_RNAplex_equals"])
+
+    def duplex_equal (self, d1, d2):
+        i =  d1.i == d2.i
+        j =  d1.j == d2.j
+        structure =  d1.structure == d2.structure
+        return i and j and structure
+
+
+
+    def RNAplex (self, mir, mrna, constraint=None):
+        plex_in_file = 'plex.in'
+        plex_out_file = 'plex.out'
+
+        f = open(plex_in_file, 'w')
+        f.write("> query1\n")
+        f.write(mir + "\n")
+        f.write("> target1\n")
+        f.write(mrna + "\n")
+        if constraint:
+            f.write(constraint + "\n")
+        f.close()
+        consflag = "-C" if constraint else ""
+
+
+        cmd = "RNAplex {consflag} < {infile} > {outfile}".format(consflag=consflag, infile=plex_in_file,  outfile=plex_out_file)
+   #     cmd = "RNAduplex {consflag} < {infile} > {outfile}".format(consflag=consflag, infile=plex_in_file,  outfile=plex_out_file)
+
+        os.system(cmd)
+
+        f = open(plex_out_file, 'r')
+        plexout = f.readlines()
+        print (plexout)
+        f.close()
+
+        plexout = plexout[2]
+        structure = plexout.split()[0]
+        # energy = plexout.split()[-1]
+        # energy = float(energy[1:-1])
+
+        # ij = plexout[plexout.find("i:"):plexout.find("i:")+12]
+        # ij = ij.split()[0]
+        # ij = ij.split(',')
+        # i = int(ij[0][2:])
+        # j = int(ij[1][2:])
+        try:
+            energy = plexout.split()[4]
+            energy = float(energy[1:-1])
+        except ValueError:
+            energy = plexout.split()[5]
+            energy = float(energy[1:-1])
+
+
+        mir = plexout.split()[1]
+        mrna = plexout.split()[3]
+
+        i=int(mir.split(',')[1])
+        j=int(mrna.split(',')[0])
+
+
+        return Duplex (structure, i, j, energy)
+
+
 
 
 

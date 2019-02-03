@@ -1,6 +1,10 @@
 import re
 from scipy.spatial import distance
 import numpy as np
+from pathlib import Path
+from datetime import datetime
+import sys
+import logging
 
 
 class TooManyMatches(Exception):
@@ -36,4 +40,13 @@ def extract_site (site_with_stars_and_hashtags, mRNA_seq_extended, mRNA_seq_exte
     site_end_loc =  max(0, site_end_loc + int(mRNA_seq_extended_offset) + site_hashtags)
 
     return full_mrna_seq[site_start_loc:site_end_loc], site_start_loc, site_end_loc
+
+
+def filename_suffix_append(f, s):
+    f = Path(f)
+    return f.parent / Path(f.stem + s + f.suffix)
+
+def filename_date_append (f):
+    return filename_suffix_append (f, "_{}".format(datetime.now().strftime("%Y%m%d-%H%M%S")))
+
 

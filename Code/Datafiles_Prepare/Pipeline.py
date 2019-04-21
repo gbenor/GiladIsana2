@@ -53,12 +53,13 @@ class Pipeline(object):
         self.blast_db_csv_ucsc = str(self.data_dir / Path(self.organism + "_ucsc.csv"))
         self.blast_db_fasta_ucsc_valid = str(self.data_dir / Path(self.organism + "_ucsc_valid.fasta"))
         self.blast_db_ucsc = str(self.data_dir / "blast_files"  / "blastdb_ucsc")
-        self.blast_tmp = str(self.data_dir / "blast_files" /"tmp" / "tmp_result.xml")
-        self.blast_result = str(self.data_dir / Path (self.organism +"_" +self.paper_name +"_blast.csv"))
-        self.blast_result = filename_date_append(self.blast_result)
+        self.blast_tmp = str(self.data_dir / "blast_files" /"tmp" / "tmp_result.csv")
         self.blast_with_mRNA = str(self.data_dir / Path (self.organism +"_mRNA.csv"))
+        self.blast_with_mRNA = filename_date_append(self.blast_with_mRNA)
         self.final_output = str("Datafiles_Prepare/CSV"/ Path (self.organism +"_" +self.paper_name +"_Data.csv"))
         self.final_output = filename_date_append(self.final_output)
+        self.blast_no_unique =  str("Datafiles_Prepare/Logs"/ Path (self.organism +"_" +self.paper_name +"_Blast_Nonunique.fasta"))
+        self.blast_no_unique = filename_date_append(self.blast_no_unique)
 
     def create_blast_db_biomart(self):
         fasta_sequences = SeqIO.parse(open(self.blast_db_fasta_biomart), 'fasta')
@@ -67,7 +68,9 @@ class Pipeline(object):
         for s in fasta_sequences:
             c+=1
             if s.seq != 'Sequenceunavailable':
+                s.id=s.id[:50] # max len for blastdb id
                 valid_seq.append(s)
+
         SeqIO.write(valid_seq, self.blast_db_fasta_biomart_valid, 'fasta')
         print ("Finish filtering Biomart fasta")
         JsonLog.add_to_json("Total Biomart seq", c)
@@ -94,45 +97,70 @@ class Pipeline(object):
         BlastUtils.create_blast_db(self.blast_db_fasta_ucsc_valid, self.blast_db_ucsc)
 
 
-    def blast_mRNA(self, db_title="biomart"):
+    def blast_mRNA(self, gene_dict, db_title="biomart"):
         blast_db_title = self.blast_db_biomart if db_title=="biomart" else self.blast_db_ucsc
-        output_file = self.blast_result
+        output_file = self.blast_with_mRNA
         blast_tmp = self.blast_tmp
         inter_df = self.inter_df
+        non_unique_seq = []
+
+        colnames = ['query acc.ver', 'subject acc.ver', '%identity', 'alignment length', 'mismatches',
+                    'gap opens', 'q.start', 'q.end', 's.start', 's.end', 'evalue', 'bit score']
 
         for index, row in self.inter_df.iterrows():
             seq_to_blast = row['target sequence']
             BlastUtils.run_blastn(seq_to_blast, blast_db_title, blast_tmp)
-            full_match, title, sbjct_start, sbjct_end, identities = BlastUtils.parse_blast(blast_tmp, seq_to_blast)
-            inter_df.loc[index, db_title + '_full_match'] = full_match
-            inter_df.loc[index, db_title + '_title'] = title
-            inter_df.loc[index, db_title + '_sbjct_start'] = sbjct_start
-            inter_df.loc[index, db_title + '_sbjct_end'] = sbjct_end
-            inter_df.loc[index, db_title + '_identities'] = identities
-            if index > 100:
-                break
+            result = pd.read_csv(blast_tmp, sep='\t', names=colnames, header=None)
+
+            # Consider the full match rows only
+            #####################################
+            full_match_rows = result['%identity'] == 100.0
+            result = result[full_match_rows]
+            result.reset_index(drop=True, inplace=True)
+
+            full_match_rows = result['alignment length'] == len(seq_to_blast)
+            result = result[full_match_rows]
+            result.reset_index(drop=True, inplace=True)
+
+            full_match_rows = result['gap opens'] == 0
+            result = result[full_match_rows]
+            result.reset_index(drop=True, inplace=True)
+
+            if result.shape[0]==0:
+                continue
+
+            # Verify it is a unique gene
+            ##############################
+            result['gene'] = result['subject acc.ver'].apply(lambda x: x.split('|')[0])
+            if result['gene'].nunique()>1:
+                print (result)
+                non_unique_seq.append(SeqRecord(Seq(seq_to_blast),
+                                                id=self.organism,
+                                                description="shape:{}__{}".format(result.shape[0], result.shape[1])))
+                #continue
+                #we decided to take all the rows and not only the unique seq row. this because we find that the genes are usually identaical.
+
+
+            # Add the transcript length
+            ###############################
+            result['trans_length'] = result['subject acc.ver'].apply(lambda x: len(gene_dict[x].seq))
+
+            # choose the row with longest utr and add the full mrna
+            ###############################
+
+            best = result.iloc[[result['trans_length'].idxmax()]]
+            best.reset_index(drop=True, inplace=True)
+            inter_df.loc[index, db_title + '_sbjct_start'] = int(best['s.start'])
+            inter_df.loc[index, db_title + '_sbjct_end'] = int(best['s.end'])
+            inter_df.loc[index, db_title + '_title'] = best['subject acc.ver'][0]
+            full_mrna = str(gene_dict[best['subject acc.ver'][0]].seq)
+            inter_df.loc[index, db_title + '_full_mrna'] = full_mrna
+            inter_df.loc[index, db_title + '_blast_status'] = "OK" \
+                if full_mrna.find(seq_to_blast) != -1 else "Not OK"
 
         inter_df.to_csv(output_file)
-
-    def add_full_mRNA (self, db_title="biomart"):
-        blast_result = self.blast_result
-        blast_db_fasta = self.blast_db_fasta_biomart
-        output_file = self.blast_with_mRNA
-
-        record_dict = SeqIO.index(blast_db_fasta, "fasta")
-        inter_df = pd.read_csv(blast_result)
-        for index, row in inter_df.iterrows():
-            try:
-                key = row[db_title + '_title'].split()[0]
-                full_mrna = str(record_dict[key].seq)
-                inter_df.loc[index, db_title + '_full_mrna'] = full_mrna
-                inter_df.loc[index, db_title + '_blast_status'] = "OK" if full_mrna.find(row['target sequence']) != -1 else "Not OK"
-            except AttributeError:
-                inter_df.loc[index, db_title + '_blast_status'] = "Not OK"
-
-        inter_df.to_csv(output_file)
-
-
+        SeqIO.write(non_unique_seq, self.blast_no_unique, 'fasta')
+        JsonLog.add_to_json("Non_Unique_Gene_Seq", len(non_unique_seq))
 
     def file_formatting (self):
         in_df = pd.read_csv(self.blast_with_mRNA)
@@ -161,10 +189,10 @@ class Pipeline(object):
         # Choose the necessary columns
         in_df_filter = in_df.filter(
             ['Source', 'Organism', 'GI_ID', 'microRNA_name', 'miRNA sequence', 'target sequence', 'number of reads',
-             'biomart_title', 'biomart_sbjct_start', 'biomart_sbjct_end', 'full_mrna'], axis=1)
+             'biomart_title', 'biomart_sbjct_start', 'biomart_sbjct_end', 'biomart_full_mrna'], axis=1)
 
         in_df_filter.rename(columns={'biomart_title': 'mRNA_name', 'biomart_sbjct_start': 'mRNA_start',
-                              'biomart_sbjct_end': 'mRNA_end'}, inplace=True)
+                              'biomart_sbjct_end': 'mRNA_end', 'biomart_full_mrna': 'full_mrna'}, inplace=True)
 
 
         # reset the index
@@ -187,15 +215,11 @@ class Pipeline(object):
 
         #####################################################
         # Run the blast against biomart
-        #####################################################
-        self.blast_mRNA("biomart")
-        #self.blast_mRNA("ucsc")
-
-
-        #####################################################
         # Add the full mRNA seq and report the status
         #####################################################
-        self.add_full_mRNA()
+        gene_dict = SeqIO.index(self.blast_db_fasta_biomart_valid, "fasta")
+        self.blast_mRNA(gene_dict, "biomart")
+        #self.blast_mRNA("ucsc")
 
         #####################################################
         # Remove invalid rows and format the data

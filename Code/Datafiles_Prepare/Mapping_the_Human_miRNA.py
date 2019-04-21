@@ -36,7 +36,6 @@ def main ():
                      in_df=df_prepare(read_paper_data(interaction_file)),
                      data_dir=p_dir)
         p.run()
-        p.file_formatting()
 
 if __name__ == "__main__":
     main()

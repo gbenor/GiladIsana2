@@ -82,7 +82,6 @@ class Pairing_Beyond_Seed(object):
                      'target' : 'target sequence'}	, inplace=True)
         self.inter_df['number of reads'] = 1
         self.inter_df['GI_ID'] = range(len(self.inter_df))
-
         return self.inter_df
 
  
@@ -127,7 +126,6 @@ def main ():
                      in_df=ce.prepare_for_pipeline(),
                      data_dir=p_dir)
         p.run()
-        p.file_formatting()
 
 
 

@@ -32,6 +32,7 @@ def df_prepare (in_df):
 def main ():
     interaction_file = str(Path("Raw/1-s2.0-S1097276514003566-mmc3.xls"))
     log_dir = "Datafiles_Prepare/Logs/"
+
     organisms = ["Celegans", "Human",  "Mouse"]
     for organism in organisms:
         p_dir = Path (organism )/ "Raw"
@@ -46,7 +47,6 @@ def main ():
                       in_df=df_prepare(read_paper_data(interaction_file, organism)),
                       data_dir=p_dir)
         p.run()
-        p.file_formatting()
 
 
 if __name__ == "__main__":
